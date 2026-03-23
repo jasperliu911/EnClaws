@@ -160,31 +160,7 @@ CREATE INDEX idx_agents_tenant ON tenant_agents (tenant_id);
 CREATE INDEX idx_agents_channel_app ON tenant_agents (channel_app_id);
 
 -- ============================================================
--- 7. Sessions (租户隔离的会话)
--- ============================================================
-CREATE TABLE tenant_sessions (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id   UUID         NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  session_key VARCHAR(512) NOT NULL,   -- original session key format
-  agent_id    VARCHAR(128),
-  user_id     UUID         REFERENCES users(id) ON DELETE SET NULL,
-  channel     VARCHAR(64),
-  chat_type   VARCHAR(32),
-  metadata    JSONB        NOT NULL DEFAULT '{}', -- SessionEntry fields
-  status      VARCHAR(32)  NOT NULL DEFAULT 'active', -- active | archived | deleted
-  last_message_at TIMESTAMPTZ,
-  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-  UNIQUE(tenant_id, session_key)
-);
-
-CREATE INDEX idx_sessions_tenant ON tenant_sessions (tenant_id);
-CREATE INDEX idx_sessions_user ON tenant_sessions (user_id);
-CREATE INDEX idx_sessions_agent ON tenant_sessions (tenant_id, agent_id);
-CREATE INDEX idx_sessions_active ON tenant_sessions (tenant_id, status) WHERE status = 'active';
-
--- ============================================================
--- 8. Refresh Tokens (JWT 刷新令牌)
+-- 7. Refresh Tokens (JWT 刷新令牌)
 -- ============================================================
 CREATE TABLE refresh_tokens (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -401,8 +377,6 @@ CREATE TRIGGER trg_agents_updated_at BEFORE UPDATE ON tenant_agents
 CREATE TRIGGER trg_channels_updated_at BEFORE UPDATE ON tenant_channels
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER trg_channel_apps_updated_at BEFORE UPDATE ON tenant_channel_apps
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER trg_sessions_updated_at BEFORE UPDATE ON tenant_sessions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER trg_tenant_models_updated_at BEFORE UPDATE ON tenant_models
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

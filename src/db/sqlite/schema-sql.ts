@@ -135,26 +135,6 @@ CREATE TABLE IF NOT EXISTS tenant_agents (
 CREATE INDEX IF NOT EXISTS idx_agents_tenant ON tenant_agents (tenant_id);
 CREATE INDEX IF NOT EXISTS idx_agents_channel_app ON tenant_agents (channel_app_id);
 
--- 8. Sessions
-CREATE TABLE IF NOT EXISTS tenant_sessions (
-  id              TEXT PRIMARY KEY,
-  tenant_id       TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  session_key     TEXT NOT NULL,
-  agent_id        TEXT,
-  user_id         TEXT REFERENCES users(id) ON DELETE SET NULL,
-  channel         TEXT,
-  chat_type       TEXT,
-  metadata        TEXT NOT NULL DEFAULT '{}',
-  status          TEXT NOT NULL DEFAULT 'active',
-  last_message_at TEXT,
-  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(tenant_id, session_key)
-);
-CREATE INDEX IF NOT EXISTS idx_sessions_tenant ON tenant_sessions (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_user ON tenant_sessions (user_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_agent ON tenant_sessions (tenant_id, agent_id);
-
 -- 8. Refresh Tokens
 CREATE TABLE IF NOT EXISTS refresh_tokens (
   id          TEXT PRIMARY KEY,
@@ -351,10 +331,5 @@ CREATE TRIGGER IF NOT EXISTS trg_channels_updated_at AFTER UPDATE ON tenant_chan
 CREATE TRIGGER IF NOT EXISTS trg_channel_apps_updated_at AFTER UPDATE ON tenant_channel_apps
   FOR EACH ROW BEGIN
     UPDATE tenant_channel_apps SET updated_at = datetime('now') WHERE id = NEW.id;
-  END;
-
-CREATE TRIGGER IF NOT EXISTS trg_sessions_updated_at AFTER UPDATE ON tenant_sessions
-  FOR EACH ROW BEGIN
-    UPDATE tenant_sessions SET updated_at = datetime('now') WHERE id = NEW.id;
   END;
 `;
