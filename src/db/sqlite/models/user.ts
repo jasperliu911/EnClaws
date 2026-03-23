@@ -50,7 +50,7 @@ export function toSafeUser(user: User): SafeUser {
   return safe;
 }
 
-export async function createUser(input: CreateUserInput): Promise<SafeUser> {
+export async function createUser(input: CreateUserInput, opts?: { skipDirInit?: boolean }): Promise<SafeUser> {
   const id = generateUUID();
   const passwordHash = input.password ? await hashPassword(input.password) : null;
 
@@ -71,18 +71,20 @@ export async function createUser(input: CreateUserInput): Promise<SafeUser> {
   const user = rowToUser(result.rows[0]);
 
   // Initialize tenant-scoped directories
-  const dirKey = user.unionId ?? user.id;
-  try {
-    const dirs = [
-      resolveTenantDevicesDir(user.tenantId, dirKey),
-      resolveTenantCredentialsDir(user.tenantId, dirKey),
-      resolveTenantCronDir(user.tenantId, dirKey),
-    ];
-    for (const dir of dirs) {
-      fs.mkdirSync(dir, { recursive: true });
+  if (!opts?.skipDirInit) {
+    const dirKey = user.unionId ?? user.id;
+    try {
+      const dirs = [
+        resolveTenantDevicesDir(user.tenantId, dirKey),
+        resolveTenantCredentialsDir(user.tenantId, dirKey),
+        resolveTenantCronDir(user.tenantId, dirKey),
+      ];
+      for (const dir of dirs) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    } catch {
+      // Non-fatal
     }
-  } catch {
-    // Non-fatal
   }
 
   return toSafeUser(user);

@@ -36,12 +36,9 @@ import { invalidateTenantConfigCache } from "../../config/tenant-config.js";
 import {
   resolveTenantDir,
   resolveTenantAgentDir,
-  resolveTenantUserDir,
-  resolveTenantAgentWorkspaceDir,
 } from "../../config/sessions/tenant-paths.js";
 import {
   ensureTenantBootstrapFiles,
-  registerTenantBootstrapContext,
 } from "../../agents/workspace.js";
 import type { TenantContext } from "../../auth/middleware.js";
 import type { ChannelPolicy, TenantChannelConfig, ModelConfigEntry } from "../../db/types.js";
@@ -307,15 +304,13 @@ export const tenantChannelsHandlers: GatewayRequestHandlers = {
             name: agent.name,
           });
 
-          // Initialize agent directory and bootstrap files on disk
+          // Initialize tenant + agent directory and bootstrap files on disk
+          // (skip user-level dirs — they are created on-demand when a user starts a session)
           try {
             const tenantDir = resolveTenantDir(ctx.tenantId);
             const agentDir = resolveTenantAgentDir(ctx.tenantId, agent.agentId);
-            const userDir = resolveTenantUserDir(ctx.tenantId, ctx.userId);
-            const workspaceDir = resolveTenantAgentWorkspaceDir(ctx.tenantId, agent.agentId, ctx.userId);
-            const bootstrapCtx = { tenantDir, agentDir, userDir, workspaceDir };
+            const bootstrapCtx = { tenantDir, agentDir };
             await ensureTenantBootstrapFiles(bootstrapCtx);
-            registerTenantBootstrapContext(workspaceDir, bootstrapCtx);
             // Sync systemPrompt to IDENTITY.md
             if (agentConfig?.systemPrompt) {
               const identityPath = path.join(agentDir, "IDENTITY.md");
@@ -711,11 +706,8 @@ export const tenantChannelsHandlers: GatewayRequestHandlers = {
           try {
             const tenantDir = resolveTenantDir(ctx.tenantId);
             const agentDir = resolveTenantAgentDir(ctx.tenantId, agent.agentId);
-            const userDir = resolveTenantUserDir(ctx.tenantId, ctx.userId);
-            const workspaceDir = resolveTenantAgentWorkspaceDir(ctx.tenantId, agent.agentId, ctx.userId);
-            const bootstrapCtx = { tenantDir, agentDir, userDir, workspaceDir };
+            const bootstrapCtx = { tenantDir, agentDir };
             await ensureTenantBootstrapFiles(bootstrapCtx);
-            registerTenantBootstrapContext(workspaceDir, bootstrapCtx);
             if (agentConfig.systemPrompt) {
               await fs.writeFile(path.join(agentDir, "IDENTITY.md"), String(agentConfig.systemPrompt).trim(), "utf-8");
             }

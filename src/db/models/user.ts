@@ -72,8 +72,8 @@ export function seedUserDirFiles(tenantId: string, dirKey: string): void {
   }
 }
 
-export async function createUser(input: CreateUserInput): Promise<SafeUser> {
-  if (getDbType() === DB_SQLITE) return sqliteUser.createUser(input);
+export async function createUser(input: CreateUserInput, opts?: { skipDirInit?: boolean }): Promise<SafeUser> {
+  if (getDbType() === DB_SQLITE) return sqliteUser.createUser(input, opts);
   const passwordHash = input.password ? await hashPassword(input.password) : null;
   const result = await query(
     `INSERT INTO users (tenant_id, email, password_hash, display_name, role)
@@ -90,20 +90,22 @@ export async function createUser(input: CreateUserInput): Promise<SafeUser> {
   const user = rowToUser(result.rows[0]);
 
   // Initialize tenant-scoped directories and seed initial files (use union_id as folder name)
-  const dirKey = user.unionId ?? user.id;
-  try {
-    const dirs = [
-      resolveTenantDevicesDir(user.tenantId, dirKey),
-      resolveTenantCredentialsDir(user.tenantId, dirKey),
-      resolveTenantCronDir(user.tenantId, dirKey),
-      resolveTenantAgentWorkspaceDir(user.tenantId, undefined, dirKey),
-    ];
-    for (const dir of dirs) {
-      fs.mkdirSync(dir, { recursive: true });
+  if (!opts?.skipDirInit) {
+    const dirKey = user.unionId ?? user.id;
+    try {
+      const dirs = [
+        resolveTenantDevicesDir(user.tenantId, dirKey),
+        resolveTenantCredentialsDir(user.tenantId, dirKey),
+        resolveTenantCronDir(user.tenantId, dirKey),
+        resolveTenantAgentWorkspaceDir(user.tenantId, undefined, dirKey),
+      ];
+      for (const dir of dirs) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      seedUserDirFiles(user.tenantId, dirKey);
+    } catch {
+      // Non-fatal: directories will be created on first write
     }
-    seedUserDirFiles(user.tenantId, dirKey);
-  } catch {
-    // Non-fatal: directories will be created on first write
   }
 
   return toSafeUser(user);

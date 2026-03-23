@@ -38,7 +38,7 @@ export type GatewayRequestContext = {
   cron: CronService;
   cronStorePath: string;
   /** Resolve tenant-scoped cron service + storePath when tenant context is present. */
-  resolveTenantCron?: (tenant: BaseTenantContext) => { cron: CronService; cronStorePath: string };
+  resolveTenantCron?: (tenant: BaseTenantContext) => { cron: CronService; cronStorePath: string } | undefined;
   execApprovalManager?: ExecApprovalManager;
   loadGatewayModelCatalog: () => Promise<ModelCatalogEntry[]>;
   getHealthCache: () => HealthSummary | null;

@@ -467,13 +467,14 @@ export async function ensureAgentWorkspace(params?: {
  * - User workspace:                          → tenants/{tid}/users/{userId}/workspace/ (created, but no files seeded)
  */
 export async function ensureTenantBootstrapFiles(ctx: TenantBootstrapContext): Promise<void> {
-  // Ensure all directories exist
-  await Promise.all([
+  // Ensure all directories exist (skip user dirs when not provided)
+  const mkdirs = [
     fs.mkdir(ctx.tenantDir, { recursive: true }),
     fs.mkdir(ctx.agentDir, { recursive: true }),
-    fs.mkdir(ctx.userDir, { recursive: true }),
-    fs.mkdir(ctx.workspaceDir, { recursive: true }),
-  ]);
+  ];
+  if (ctx.userDir) mkdirs.push(fs.mkdir(ctx.userDir, { recursive: true }));
+  if (ctx.workspaceDir) mkdirs.push(fs.mkdir(ctx.workspaceDir, { recursive: true }));
+  await Promise.all(mkdirs);
 
   // Tenant-level files
   const tenantIdentityPath = path.join(ctx.tenantDir, DEFAULT_IDENTITY_FILENAME);
@@ -532,10 +533,12 @@ export async function ensureTenantBootstrapFiles(ctx: TenantBootstrapContext): P
     await writeFileIfMissing(agentBootstrapPath, bootstrapTemplate);
   }
 
-  // User-level files
-  const userPath = path.join(ctx.userDir, DEFAULT_USER_FILENAME);
-  const userTemplate = await loadTemplate(DEFAULT_USER_FILENAME);
-  await writeFileIfMissing(userPath, userTemplate);
+  // User-level files (skip when userDir is not provided)
+  if (ctx.userDir) {
+    const userPath = path.join(ctx.userDir, DEFAULT_USER_FILENAME);
+    const userTemplate = await loadTemplate(DEFAULT_USER_FILENAME);
+    await writeFileIfMissing(userPath, userTemplate);
+  }
 }
 
 /**
@@ -688,8 +691,8 @@ export type TenantBootstrapContext = {
   tenantId: string;    // tenant UUID
   tenantDir: string;   // tenants/{tid}/         — enterprise IDENTITY, TOOLS, MEMORY
   agentDir: string;    // tenants/{tid}/agents/{agentId}/ — AGENT, SOUL, IDENTITY, HEARTBEAT, BOOTSTRAP
-  userDir: string;     // tenants/{tid}/users/{userId}/   — USER.md
-  workspaceDir: string; // tenants/{tid}/users/{userId}/workspace/ — MEMORY, memory/
+  userDir?: string;     // tenants/{tid}/users/{userId}/   — USER.md
+  workspaceDir?: string; // tenants/{tid}/users/{userId}/workspace/ — MEMORY, memory/
 };
 
 // ============================================================================
@@ -751,17 +754,23 @@ async function loadTenantBootstrapFiles(
     { name: DEFAULT_IDENTITY_FILENAME, filePath: path.join(ctx.agentDir, DEFAULT_IDENTITY_FILENAME), rootDir: ctx.agentDir },
     { name: DEFAULT_HEARTBEAT_FILENAME, filePath: path.join(ctx.agentDir, DEFAULT_HEARTBEAT_FILENAME), rootDir: ctx.agentDir },
     { name: DEFAULT_BOOTSTRAP_FILENAME, filePath: path.join(ctx.agentDir, DEFAULT_BOOTSTRAP_FILENAME), rootDir: ctx.agentDir },
-    // User-level files
-    { name: DEFAULT_USER_FILENAME, filePath: path.join(ctx.userDir, DEFAULT_USER_FILENAME), rootDir: ctx.userDir },
   ];
 
+  // User-level files (only when userDir is provided)
+  if (ctx.userDir) {
+    entries.push({ name: DEFAULT_USER_FILENAME, filePath: path.join(ctx.userDir, DEFAULT_USER_FILENAME), rootDir: ctx.userDir });
+  }
+
   // User memory files from workspace
-  entries.push(
-    ...(await resolveMemoryBootstrapEntries(ctx.workspaceDir)).map((e) => ({
-      ...e,
-      rootDir: ctx.workspaceDir,
-    })),
-  );
+  if (ctx.workspaceDir) {
+    const wsDir = ctx.workspaceDir;
+    entries.push(
+      ...(await resolveMemoryBootstrapEntries(wsDir)).map((e) => ({
+        ...e,
+        rootDir: wsDir,
+      })),
+    );
+  }
 
   const result: WorkspaceBootstrapFile[] = [];
 

@@ -531,6 +531,10 @@ export async function startGatewayServer(
     const key = `${tenant.tenantId}:${tenant.userId}`;
     let cached = tenantCronCache.get(key);
     if (cached) return cached;
+    // Skip cron init if the user's cron directory does not exist yet
+    // (e.g. page-registered enterprise users whose dirs are created on-demand)
+    const cronDir = resolveTenantCronDir(tenant.tenantId, tenant.userId);
+    if (!fs.existsSync(cronDir)) return undefined;
     const tenantStorePath = resolveUserCronStorePath(tenant.tenantId, tenant.userId);
     const tenantCronState = buildTenantCronService({
       tenantId: tenant.tenantId,
@@ -677,6 +681,11 @@ export async function startGatewayServer(
           try {
             const { users } = await listUsers(tenant.id, { status: "active" });
             for (const user of users) {
+              // Skip directory init & cron for page-registered users (no IM channel binding)
+              // Their directories will be created on-demand when they actually start a session
+              if (!user.unionId && (!user.openIds || user.openIds.length === 0)) {
+                continue;
+              }
               // Compensate: ensure user-scoped directories exist (use union_id as folder name)
               const dirKey = user.unionId ?? user.id;
               try {
