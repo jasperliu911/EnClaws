@@ -8,12 +8,20 @@
 import { html, css, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { login, register, type AuthState } from "../auth-store.ts";
-import { loadSettings } from "../storage.ts";
+import { loadSettings, saveSettings } from "../storage.ts";
+import { t, i18n, I18nController, SUPPORTED_LOCALES } from "../../i18n/index.ts";
+import type { Locale } from "../../i18n/index.ts";
+import "../components/language-switcher.ts";
 
 type AuthMode = "login" | "register";
 
+/** Per-field error map. Keys are field identifiers, values are i18n error strings. */
+type FieldErrors = Record<string, string>;
+
 @customElement("openclaw-login")
 export class OpenClawLogin extends LitElement {
+  private i18nCtrl = new I18nController(this);
+
   static styles = css`
     :host {
       display: flex;
@@ -23,6 +31,19 @@ export class OpenClawLogin extends LitElement {
       background: var(--bg, #0a0a0a);
       color: var(--text, #e5e5e5);
       font-family: var(--font-sans, system-ui, sans-serif);
+      position: relative;
+    }
+
+    .lang-switcher {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 200;
+      --text-color: var(--text, #e5e5e5);
+      --surface-1: var(--card, #141414);
+      --surface-2: rgba(255, 255, 255, 0.08);
+      --border-color: var(--border, #262626);
+      --primary-color: var(--accent, #3b82f6);
     }
 
     .login-container {
@@ -91,14 +112,37 @@ export class OpenClawLogin extends LitElement {
       border-color: var(--accent, #3b82f6);
     }
 
+    .form-group input.has-error {
+      border-color: var(--text-destructive, #ef4444);
+    }
+
     .form-group input::placeholder {
       color: var(--text-muted, #525252);
     }
 
     .form-hint {
       font-size: 0.72rem;
-      color: var(--text-muted, #525252);
+      color: var(--text-hint, #8a8a8a);
       margin-top: 0.25rem;
+    }
+
+    .field-error {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      margin-top: 0.3rem;
+      font-size: 0.75rem;
+      color: var(--text-destructive, #ef4444);
+    }
+
+    .field-error svg {
+      flex-shrink: 0;
+      width: 14px;
+      height: 14px;
+    }
+
+    .form-error {
+      margin-bottom: 0.75rem;
     }
 
     .btn-primary {
@@ -141,16 +185,6 @@ export class OpenClawLogin extends LitElement {
       text-decoration: underline;
     }
 
-    .error-msg {
-      background: var(--bg-destructive, #2d1215);
-      border: 1px solid var(--border-destructive, #7f1d1d);
-      border-radius: var(--radius-md, 6px);
-      color: var(--text-destructive, #fca5a5);
-      padding: 0.5rem 0.75rem;
-      font-size: 0.8rem;
-      margin-bottom: 1rem;
-    }
-
     .divider {
       display: flex;
       align-items: center;
@@ -174,7 +208,9 @@ export class OpenClawLogin extends LitElement {
   @property({ type: String }) gatewayUrl = "";
   @state() private mode: AuthMode = "login";
   @state() private loading = false;
-  @state() private error = "";
+  /** Stores the raw server error message; translated at render time. */
+  @state() private serverError = "";
+  @state() private fieldErrors: FieldErrors = {};
 
   // Login fields
   @state() private email = "";
@@ -188,18 +224,114 @@ export class OpenClawLogin extends LitElement {
   @state() private regPassword = "";
   @state() private regDisplayName = "";
 
+  // Focus tracking for inline hints
+  @state() private slugFocused = false;
+  @state() private regPasswordFocused = false;
+
+  private handleLocaleChange(e: CustomEvent<{ locale: string }>) {
+    const loc = e.detail.locale;
+    if (SUPPORTED_LOCALES.includes(loc as Locale)) {
+      void i18n.setLocale(loc as Locale).then(() => {
+        if (Object.keys(this.fieldErrors).length > 0) {
+          this.fieldErrors = this.mode === "login" ? this.validateLoginForm() : this.validateRegisterForm();
+        }
+      });
+      const settings = loadSettings();
+      saveSettings({ ...settings, locale: loc });
+    }
+  }
+
+  /** Map raw server error to i18n at render time so language switches take effect. */
+  private translateServerError(raw: string): string {
+    if (raw.includes("Invalid credentials")) return t("login.invalidCredentials");
+    if (raw.includes("slug already in use")) return t("login.slugAlreadyInUse");
+    if (raw.includes("已注册") || raw.includes("already registered") || raw.includes("duplicate key") || raw.includes("unique constraint")) return t("login.emailAlreadyRegistered");
+    return raw;
+  }
+
   private resolveGatewayUrl(): string {
     if (this.gatewayUrl) return this.gatewayUrl;
     const settings = loadSettings();
     return settings.gatewayUrl;
   }
 
+  private validateEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  private validatePasswordStrength(pw: string): boolean {
+    return pw.length >= 8 && /[a-z]/.test(pw) && /[A-Z]/.test(pw) && /\d/.test(pw) && /[^a-zA-Z0-9]/.test(pw);
+  }
+
+  private validateLoginForm(): FieldErrors {
+    const errors: FieldErrors = {};
+    if (!this.email) errors.email = t("login.errRequired", { field: t("login.email") });
+    else if (!this.validateEmail(this.email)) errors.email = t("login.errEmailInvalid");
+    if (!this.password) errors.password = t("login.errRequired", { field: t("login.password") });
+    return errors;
+  }
+
+  private validateRegisterForm(): FieldErrors {
+    const errors: FieldErrors = {};
+    if (!this.regTenantName) errors.tenantName = t("login.errRequired", { field: t("login.tenantName") });
+    if (!this.regTenantSlug) errors.tenantSlug = t("login.errRequired", { field: t("login.tenantSlug") });
+    else if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$/.test(this.regTenantSlug)) errors.tenantSlug = t("login.errSlugInvalid");
+    if (!this.regEmail) errors.regEmail = t("login.errRequired", { field: t("login.email") });
+    else if (!this.validateEmail(this.regEmail)) errors.regEmail = t("login.errEmailInvalid");
+    if (!this.regPassword) errors.regPassword = t("login.errRequired", { field: t("login.password") });
+    else if (!this.validatePasswordStrength(this.regPassword)) errors.regPassword = t("login.errPasswordWeak");
+    return errors;
+  }
+
+  private renderFieldError(field: string) {
+    const msg = this.fieldErrors[field];
+    if (!msg) return nothing;
+    return html`
+      <div class="field-error">
+        <svg viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1ZM7.25 4.5a.75.75 0 0 1 1.5 0v3.25a.75.75 0 0 1-1.5 0V4.5ZM8 11.5A.875.875 0 1 1 8 9.75a.875.875 0 0 1 0 1.75Z"/>
+        </svg>
+        <span>${msg}</span>
+      </div>
+    `;
+  }
+
+  private renderFormError(msg: string) {
+    return html`
+      <div class="field-error form-error">
+        <svg viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1ZM7.25 4.5a.75.75 0 0 1 1.5 0v3.25a.75.75 0 0 1-1.5 0V4.5ZM8 11.5A.875.875 0 1 1 8 9.75a.875.875 0 0 1 0 1.75Z"/>
+        </svg>
+        <span>${msg}</span>
+      </div>
+    `;
+  }
+
+  private hasError(field: string): boolean {
+    return !!this.fieldErrors[field];
+  }
+
+  private clearFieldError(field: string) {
+    if (this.fieldErrors[field]) {
+      const next = { ...this.fieldErrors };
+      delete next[field];
+      this.fieldErrors = next;
+    }
+    if (this.serverError) this.serverError = "";
+  }
+
   private async handleLogin(e: Event) {
     e.preventDefault();
-    if (!this.email || !this.password) return;
+    this.fieldErrors = {};
+    this.serverError = "";
+
+    const errors = this.validateLoginForm();
+    if (Object.keys(errors).length > 0) {
+      this.fieldErrors = errors;
+      return;
+    }
 
     this.loading = true;
-    this.error = "";
 
     try {
       const auth = await login({
@@ -210,7 +342,7 @@ export class OpenClawLogin extends LitElement {
       });
       this.dispatchEvent(new CustomEvent("auth-success", { detail: auth, bubbles: true, composed: true }));
     } catch (err) {
-      this.error = err instanceof Error ? err.message : "登录失败";
+      this.serverError = err instanceof Error ? err.message : t("login.loginFailed");
     } finally {
       this.loading = false;
     }
@@ -218,10 +350,16 @@ export class OpenClawLogin extends LitElement {
 
   private async handleRegister(e: Event) {
     e.preventDefault();
-    if (!this.regTenantName || !this.regTenantSlug || !this.regEmail || !this.regPassword) return;
+    this.fieldErrors = {};
+    this.serverError = "";
+
+    const errors = this.validateRegisterForm();
+    if (Object.keys(errors).length > 0) {
+      this.fieldErrors = errors;
+      return;
+    }
 
     this.loading = true;
-    this.error = "";
 
     try {
       const auth = await register({
@@ -234,7 +372,7 @@ export class OpenClawLogin extends LitElement {
       });
       this.dispatchEvent(new CustomEvent("auth-success", { detail: auth, bubbles: true, composed: true }));
     } catch (err) {
-      this.error = err instanceof Error ? err.message : "注册失败";
+      this.serverError = err instanceof Error ? err.message : "register_failed";
     } finally {
       this.loading = false;
     }
@@ -242,7 +380,16 @@ export class OpenClawLogin extends LitElement {
 
   private switchMode(mode: AuthMode) {
     this.mode = mode;
-    this.error = "";
+    this.serverError = "";
+    this.fieldErrors = {};
+    this.email = "";
+    this.password = "";
+    this.tenantSlug = "";
+    this.regTenantName = "";
+    this.regTenantSlug = "";
+    this.regEmail = "";
+    this.regPassword = "";
+    this.regDisplayName = "";
   }
 
   private autoSlug() {
@@ -256,22 +403,26 @@ export class OpenClawLogin extends LitElement {
 
   render() {
     return html`
+      <div class="lang-switcher">
+        <language-switcher
+          .locale=${i18n.getLocale()}
+          @locale-change=${this.handleLocaleChange}
+        ></language-switcher>
+      </div>
       <div class="login-container">
         <div class="login-card">
           <div class="login-header">
             <img src="/favicon.svg" alt="OpenClaw" />
-            <h1>${this.mode === "login" ? "登录 Enterprise Claw" : "注册 Enterprise Claw"}</h1>
-            <p>${this.mode === "login" ? "使用您的企业账号登录" : "创建您的企业空间"}</p>
+            <h1>${this.mode === "login" ? t("login.title") : t("login.titleRegister")}</h1>
+            <p>${this.mode === "login" ? t("login.subtitle") : t("login.subtitleRegister")}</p>
           </div>
-
-          ${this.error ? html`<div class="error-msg">${this.error}</div>` : nothing}
 
           ${this.mode === "login" ? this.renderLoginForm() : this.renderRegisterForm()}
 
           <div class="mode-switch">
             ${this.mode === "login"
-              ? html`还没有账号？<a @click=${() => this.switchMode("register")}>注册 Enterprise Claw</a>`
-              : html`已有账号？<a @click=${() => this.switchMode("login")}>返回登录</a>`}
+              ? html`${t("login.noAccount")}<a @click=${() => this.switchMode("register")}>${t("login.registerLink")}</a>`
+              : html`${t("login.hasAccount")}<a @click=${() => this.switchMode("login")}>${t("login.backToLogin")}</a>`}
           </div>
         </div>
       </div>
@@ -280,29 +431,32 @@ export class OpenClawLogin extends LitElement {
 
   private renderLoginForm() {
     return html`
-      <form @submit=${this.handleLogin}>
+      <form @submit=${this.handleLogin} novalidate>
         <div class="form-group">
-          <label>邮箱</label>
+          <label>${t("login.email")}</label>
           <input
             type="email"
-            placeholder="your@email.com"
+            class=${this.hasError("email") ? "has-error" : ""}
+            placeholder=${t("login.emailPlaceholder")}
             .value=${this.email}
-            @input=${(e: InputEvent) => (this.email = (e.target as HTMLInputElement).value)}
-            required
+            @input=${(e: InputEvent) => { this.email = (e.target as HTMLInputElement).value; this.clearFieldError("email"); }}
           />
+          ${this.renderFieldError("email")}
         </div>
         <div class="form-group">
-          <label>密码</label>
+          <label>${t("login.password")}</label>
           <input
             type="password"
-            placeholder="输入密码"
+            class=${this.hasError("password") ? "has-error" : ""}
+            placeholder=${t("login.passwordPlaceholder")}
             .value=${this.password}
-            @input=${(e: InputEvent) => (this.password = (e.target as HTMLInputElement).value)}
-            required
+            @input=${(e: InputEvent) => { this.password = (e.target as HTMLInputElement).value; this.clearFieldError("password"); }}
           />
+          ${this.renderFieldError("password")}
         </div>
+        ${this.serverError ? this.renderFormError(this.translateServerError(this.serverError)) : nothing}
         <button class="btn-primary" type="submit" ?disabled=${this.loading}>
-          ${this.loading ? "登录中..." : "登录"}
+          ${this.loading ? t("login.loggingIn") : t("login.loginBtn")}
         </button>
       </form>
     `;
@@ -310,72 +464,75 @@ export class OpenClawLogin extends LitElement {
 
   private renderRegisterForm() {
     return html`
-      <form @submit=${this.handleRegister}>
+      <form @submit=${this.handleRegister} novalidate>
         <div class="form-group">
-          <label>企业名称</label>
+          <label>${t("login.tenantName")}</label>
           <input
             type="text"
-            placeholder="我的公司"
+            class=${this.hasError("tenantName") ? "has-error" : ""}
+            placeholder=${t("login.tenantNamePlaceholder")}
             .value=${this.regTenantName}
-            @input=${(e: InputEvent) => {
-              this.regTenantName = (e.target as HTMLInputElement).value;
-            }}
+            @input=${(e: InputEvent) => { this.regTenantName = (e.target as HTMLInputElement).value; this.clearFieldError("tenantName"); }}
             @blur=${this.autoSlug}
-            required
           />
+          ${this.renderFieldError("tenantName")}
         </div>
         <div class="form-group">
-          <label>企业标识 (URL)</label>
+          <label>${t("login.tenantSlug")}</label>
           <input
             type="text"
-            placeholder="my-company"
+            class=${this.hasError("tenantSlug") ? "has-error" : ""}
+            placeholder=${t("login.tenantSlugPlaceholder")}
             .value=${this.regTenantSlug}
             @input=${(e: InputEvent) => {
               const raw = (e.target as HTMLInputElement).value;
-              this.regTenantSlug = raw
-                .replace(/[^a-zA-Z0-9-]/g, "")
-                .slice(0, 128);
+              this.regTenantSlug = raw.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 128);
+              this.clearFieldError("tenantSlug");
             }}
-            pattern="[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]"
-            required
+            @focus=${() => { this.slugFocused = true; }}
+            @blur=${() => { this.slugFocused = false; this.autoSlug(); }}
           />
-          <div class="form-hint">仅限大小写英文字母、数字和连字符</div>
+          ${this.slugFocused ? html`<div class="form-hint">${t("login.tenantSlugHint")}</div>` : this.renderFieldError("tenantSlug")}
         </div>
 
-        <div class="divider"><span>管理员账号</span></div>
+        <div class="divider"><span>${t("login.adminAccount")}</span></div>
 
         <div class="form-group">
-          <label>姓名</label>
+          <label>${t("login.displayName")}</label>
           <input
             type="text"
-            placeholder="张三"
+            placeholder=${t("login.displayNamePlaceholder")}
             .value=${this.regDisplayName}
             @input=${(e: InputEvent) => (this.regDisplayName = (e.target as HTMLInputElement).value)}
           />
         </div>
         <div class="form-group">
-          <label>邮箱</label>
+          <label>${t("login.email")}</label>
           <input
             type="email"
-            placeholder="admin@company.com"
+            class=${this.hasError("regEmail") ? "has-error" : ""}
+            placeholder=${t("login.regEmailPlaceholder")}
             .value=${this.regEmail}
-            @input=${(e: InputEvent) => (this.regEmail = (e.target as HTMLInputElement).value)}
-            required
+            @input=${(e: InputEvent) => { this.regEmail = (e.target as HTMLInputElement).value; this.clearFieldError("regEmail"); }}
           />
+          ${this.renderFieldError("regEmail")}
         </div>
         <div class="form-group">
-          <label>密码</label>
+          <label>${t("login.password")}</label>
           <input
             type="password"
-            placeholder="至少 8 位"
+            class=${this.hasError("regPassword") ? "has-error" : ""}
+            placeholder=${t("login.regPasswordPlaceholder")}
             .value=${this.regPassword}
-            @input=${(e: InputEvent) => (this.regPassword = (e.target as HTMLInputElement).value)}
-            minlength="8"
-            required
+            @input=${(e: InputEvent) => { this.regPassword = (e.target as HTMLInputElement).value; this.clearFieldError("regPassword"); }}
+            @focus=${() => { this.regPasswordFocused = true; }}
+            @blur=${() => { this.regPasswordFocused = false; }}
           />
+          ${this.regPasswordFocused ? html`<div class="form-hint">${t("login.passwordHint")}</div>` : this.renderFieldError("regPassword")}
         </div>
+        ${this.serverError ? this.renderFormError(this.translateServerError(this.serverError)) : nothing}
         <button class="btn-primary" type="submit" ?disabled=${this.loading}>
-          ${this.loading ? "注册中..." : "创建企业空间"}
+          ${this.loading ? t("login.registering") : t("login.registerBtn")}
         </button>
       </form>
     `;

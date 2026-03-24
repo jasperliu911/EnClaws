@@ -1,10 +1,11 @@
 import { html, nothing } from "lit";
 import { parseAgentSessionKey } from "../../../src/routing/session-key.js";
-import { t, i18n } from "../i18n/index.ts";
+import { t, i18n, isSupportedLocale } from "../i18n/index.ts";
 import { refreshChatAvatar } from "./app-chat.ts";
 import { renderUsageTab } from "./app-render-usage-tab.ts";
 import { renderChatControls, renderTab, renderThemeToggle } from "./app-render.helpers.ts";
 import "./components/language-switcher.ts";
+import { loadSettings } from "./storage.ts";
 import type { AppViewState } from "./app-view-state.ts";
 import { loadAgentFileContent, loadAgentFiles, saveAgentFile } from "./controllers/agent-files.ts";
 import { loadAgentIdentities, loadAgentIdentity } from "./controllers/agent-identity.ts";
@@ -308,8 +309,12 @@ export function renderApp(state: AppViewState) {
     return html`<openclaw-login
       .gatewayUrl=${state.settings.gatewayUrl}
       @auth-success=${() => {
+        state.applySettings(loadSettings());
+        const loc = state.settings.locale;
+        if (isSupportedLocale(loc)) {
+          void i18n.setLocale(loc);
+        }
         state.setTab("tenant-users");
-        // Create a fresh gateway connection (new client with reset seq counter)
         state.connect();
       }}
     ></openclaw-login>`;

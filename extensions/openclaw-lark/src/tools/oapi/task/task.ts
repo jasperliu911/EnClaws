@@ -86,6 +86,18 @@ const FeishuTaskTaskSchema = Type.Union([
         },
       ),
     ),
+    reminders: Type.Optional(
+      Type.Array(
+        Type.Object({
+          relative_fire_minute: Type.Number({
+            description: '相对于截止时间的提醒分钟数（>=0），例如 30 表示截止前 30 分钟提醒',
+          }),
+        }),
+        {
+          description: '任务提醒列表（最多 1 个，需同时设置截止时间）',
+        },
+      ),
+    ),
     repeat_rule: Type.Optional(
       Type.String({
         description: '重复规则（RRULE 格式）',
@@ -270,6 +282,7 @@ type FeishuTaskTaskParams =
         id: string;
         role?: 'assignee' | 'follower';
       }>;
+      reminders?: Array<{ relative_fire_minute: number }>;
       repeat_rule?: string;
       tasklists?: Array<{
         tasklist_guid: string;
@@ -394,6 +407,7 @@ export function registerFeishuTaskTaskTool(api: OpenClawPluginApi) {
               }
 
               if (p.members) taskData.members = p.members;
+              if (p.reminders) taskData.reminders = p.reminders;
               if (p.repeat_rule) taskData.repeat_rule = p.repeat_rule;
               if (p.tasklists) taskData.tasklists = p.tasklists;
 

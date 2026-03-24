@@ -20,7 +20,7 @@ description: |
 
 ```json
 {
-  "tool_actions": ["feishu_get_user.default", "feishu_search_user.default", "feishu_task_task.create", "feishu_task_task.get", "feishu_task_task.list", "feishu_task_task.patch", "feishu_task_task.add_members", "feishu_task_task.remove_members", "feishu_task_tasklist.create", "feishu_task_tasklist.get", "feishu_task_tasklist.list", "feishu_task_tasklist.tasks", "feishu_task_tasklist.patch", "feishu_task_tasklist.delete", "feishu_task_tasklist.add_members", "feishu_task_tasklist.remove_members", "feishu_task_comment.create", "feishu_task_comment.list", "feishu_task_comment.get", "feishu_task_subtask.create", "feishu_task_subtask.list", "feishu_calendar_event.create"]
+  "tool_actions": ["feishu_get_user.default", "feishu_search_user.default", "feishu_task_task.create", "feishu_task_task.get", "feishu_task_task.list", "feishu_task_task.patch", "feishu_task_task.add_members", "feishu_task_task.remove_members", "feishu_task_tasklist.create", "feishu_task_tasklist.get", "feishu_task_tasklist.list", "feishu_task_tasklist.tasks", "feishu_task_tasklist.patch", "feishu_task_tasklist.delete", "feishu_task_tasklist.add_members", "feishu_task_tasklist.remove_members", "feishu_task_comment.create", "feishu_task_comment.list", "feishu_task_comment.get", "feishu_task_subtask.create", "feishu_task_subtask.list"]
 }
 ```
 
@@ -35,7 +35,7 @@ description: |
 - ✅ **tasklist.tasks 必须**：tasklist_guid
 - ✅ **完成任务**：completed_at = "2026-02-26 15:00:00"
 - ✅ **反完成（恢复未完成）**：completed_at = "0"
-- ✅ **智能日历提醒**：创建任务后必须自动同步创建日历提醒，提醒时间按阶梯规则设置（详见「智能提醒规则」）。
+- ✅ **任务提醒**：创建任务时必须设置 `reminders` 字段（截止前提醒），提醒时间按阶梯规则设置（详见「智能提醒规则」）。无需再创建日历日程作为提醒。
 - ✅ **创建成功后返回链接**：优先使用工具返回结果中的 `task_url` 字段作为任务链接；如果 `task_url` 不存在，禁止拼接url，提示链接暂时没有生成，到任务中心查看。
 - ✅ **创建前确认**：在调用 `feishu_task_task.create` 之前，必须先向用户发送一条确认消息，列出任务的所有关键信息（内容、负责人、截止时间、关注人），并在用户确认后再执行创建。
 - ✅ **查询任务**：查询任务时，应包含当前用户作为 **负责人（assignee）** 或 **关注人（follower）** 的所有相关任务。如果 `list` 接口返回的数据量大，应确保分页查询完整，不要遗漏任务。
@@ -47,7 +47,7 @@ description: |
 
 | 用户意图 | 工具 | action | 必填参数 | 强烈建议 | 常用可选 |
 |---------|------|--------|---------|---------|---------|
-| 新建待办 | feishu_task_task | create | summary, due, members | current_user_id（SenderId） | description |
+| 新建待办 | feishu_task_task | create | summary, due, members, reminders | current_user_id（SenderId） | description |
 | 查未完成任务 | feishu_task_task | list | - | completed=false | page_size |
 | 获取任务详情 | feishu_task_task | get | task_guid | - | - |
 | 完成任务 | feishu_task_task | patch | task_guid, completed_at | - | - |
@@ -193,31 +193,28 @@ description: |
 
 ---
 
-## � 智能提醒规则（联动飞书日历）
+## 🔔 智能提醒规则（任务原生提醒）
 
-创建任务成功后，**自动调用 `feishu_calendar_event.create`** 为负责人创建一条提醒日程，提醒档位如下：
+创建任务时，通过 `reminders` 字段设置截止时间前的提醒，**无需额外创建日历日程**。
 
-| 截止时间距今 | 日程时间 | 单提醒（relative_fire_minute） | 说明 |
-|-------------|---------|-------------------------------|------|
-| **< 1 天** | 截止前 15 分钟，时长 15 分钟 | 15 | 临近提醒 |
-| **1–2 天** | 截止前 30 分钟，时长 30 分钟 | 30 | 轻提醒 |
-| **> 2 天** | 截止前 60 分钟，时长 30 分钟 | 60 | 提前提醒 |
+| 截止时间距今 | relative_fire_minute | 说明 |
+|-------------|---------------------|------|
+| **< 1 天** | 15 | 截止前 15 分钟提醒 |
+| **1–2 天** | 30 | 截止前 30 分钟提醒 |
+| **> 2 天** | 60 | 截止前 60 分钟提醒 |
 
-**日历创建参数示例**：
+**创建任务时直接传入 reminders 参数**：
 ```json
 {
   "action": "create",
-  "summary": "📋 任务提醒：{任务标题}",
-  "start_time": "{根据规则计算的开始时间}",
-  "end_time": "{start_time + 30m}",
-  "reminders": [
-    {"relative_fire_minute": 30}
-  ],
-  "attendees": [
-    {"type": "user", "id": "{assignee_id}"}
-  ]
+  "summary": "准备周会材料",
+  "due": {"timestamp": "2026-02-28T17:00:00+08:00"},
+  "reminders": [{"relative_fire_minute": 30}],
+  "members": [{"id": "ou_xxx", "role": "assignee"}]
 }
 ```
+
+⚠️ 设置提醒必须同时设置截止时间（due），一个任务最多 1 个提醒。
 
 ---
 
@@ -247,6 +244,7 @@ description: |
     "timestamp": "2026-02-28 17:00:00",
     "is_all_day": false
   },
+  "reminders": [{"relative_fire_minute": 30}],
   "members": [
     {"id": "ou_aaa", "role": "assignee"},
     {"id": "ou_bbb", "role": "follower"}
@@ -263,13 +261,11 @@ description: |
 👤 负责人：张三
 👀 关注人：李四
 ⏰ 截止时间：2026-02-28 17:00
-📅 已同步日历提醒（提前 30 分钟）
+🔔 提醒：截止前 30 分钟
 🔗 链接：{task_url}
 
 （链接获取优先级：优先使用返回的 task_url 字段；若无，提示：链接生成失败，请到飞书任务里查看）
 ```
-
-**⚠️ 注意：不要在返回消息中包含日历链接。** 日历日程是创建在负责人个人日历上的，其他群成员无法打开该链接。只需提示"已同步日历提醒"即可。
 
 ### 场景 2: 查询我的相关任务（包含我负责和关注的）
 

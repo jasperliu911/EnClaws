@@ -1,7 +1,15 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { SUPPORTED_LOCALES } from "../../i18n/index.ts";
+import type { Locale } from "../../i18n/index.ts";
 
-export type SupportedLocale = "en" | "zh-CN";
+const LOCALE_LABELS: Record<Locale, string> = {
+  "en": "English",
+  "zh-CN": "简体中文",
+  "zh-TW": "繁體中文",
+  "pt-BR": "Portugues",
+  "de": "Deutsch",
+};
 
 @customElement("language-switcher")
 export class LanguageSwitcher extends LitElement {
@@ -92,7 +100,7 @@ export class LanguageSwitcher extends LitElement {
     this.menuOpen = !this.menuOpen;
   }
 
-  private handleSelect(loc: SupportedLocale) {
+  private handleSelect(loc: Locale) {
     this.menuOpen = false;
     if (this.locale !== loc) {
       this.dispatchEvent(
@@ -122,7 +130,6 @@ export class LanguageSwitcher extends LitElement {
   }
 
   render() {
-    // Basic globe icon SVG
     const globeIcon = html`
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -143,7 +150,7 @@ export class LanguageSwitcher extends LitElement {
       </svg>
     `;
 
-    const currentLabel = this.locale.startsWith("zh") ? "简体中文" : "English";
+    const currentLabel = LOCALE_LABELS[this.locale as Locale] ?? "English";
 
     return html`
       <button @click=${() => this.handleToggle()}>
@@ -152,18 +159,16 @@ export class LanguageSwitcher extends LitElement {
       </button>
 
       <div class="menu ${this.menuOpen ? "open" : ""}">
-        <button 
-          class="menu-item ${this.locale.startsWith("en") ? "active" : ""}" 
-          @click=${() => this.handleSelect("en")}
-        >
-          English
-        </button>
-        <button 
-          class="menu-item ${this.locale.startsWith("zh") ? "active" : ""}" 
-          @click=${() => this.handleSelect("zh-CN")}
-        >
-          简体中文
-        </button>
+        ${SUPPORTED_LOCALES.map(
+          (loc) => html`
+            <button
+              class="menu-item ${this.locale === loc ? "active" : ""}"
+              @click=${() => this.handleSelect(loc)}
+            >
+              ${LOCALE_LABELS[loc]}
+            </button>
+          `,
+        )}
       </div>
     `;
   }
