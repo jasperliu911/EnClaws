@@ -24,6 +24,7 @@ import {
 } from "../tenant-session-utils.js";
 import { loadSessionStore } from "../../config/sessions.js";
 import { updateSessionStore } from "../../config/sessions/store.js";
+import { archiveSessionTranscripts } from "../session-utils.fs.js";
 import { createAuditLog } from "../../db/models/audit-log.js";
 
 function getTenantCtx(
@@ -197,15 +198,30 @@ export const tenantSessionsHandlers: GatewayRequestHandlers = {
     const storePath = resolveRequestStorePath(cfg, agentId, ctx.tenantId, ctx.userId);
 
     try {
-      const deleted = await updateSessionStore(storePath, (store) => {
-        if (!store[key]) return false;
-        delete store[key];
+      // Read entry before deletion so we can archive its transcript file.
+      const store = loadSessionStore(storePath);
+      const entry = store[key];
+
+      const deleted = await updateSessionStore(storePath, (s) => {
+        if (!s[key]) return false;
+        delete s[key];
         return true;
       });
 
       if (!deleted) {
         respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "Session not found"));
         return;
+      }
+
+      // Archive transcript to tenant-scoped sessions dir (soft-delete).
+      if (entry?.sessionId) {
+        archiveSessionTranscripts({
+          sessionId: entry.sessionId,
+          storePath,
+          sessionFile: entry.sessionFile,
+          reason: "deleted",
+          restrictToStoreDir: true,
+        });
       }
 
       await createAuditLog({
