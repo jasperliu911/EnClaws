@@ -1,0 +1,307 @@
+/**
+ * Tenant skill management view.
+ *
+ * Lists all skills available to the current tenant workspace,
+ * showing name, description, source, and status.
+ */
+
+import { html, css, LitElement, nothing } from "lit";
+import { customElement, state, property } from "lit/decorators.js";
+import { tenantRpc } from "./rpc.ts";
+
+interface SkillInstallSpec {
+  id: string;
+  label: string;
+}
+
+interface SkillStatusEntry {
+  name: string;
+  description: string;
+  source: string;
+  filePath: string;
+  baseDir: string;
+  skillKey: string;
+  bundled?: boolean;
+  primaryEnv?: string;
+  emoji?: string;
+  homepage?: string;
+  always: boolean;
+  disabled: boolean;
+  blockedByAllowlist: boolean;
+  eligible: boolean;
+  requirements: {
+    bins: string[];
+    anyBins: string[];
+    env: string[];
+    config: string[];
+    os: string[];
+  };
+  missing: {
+    bins: string[];
+    env: string[];
+    config: string[];
+    os: string[];
+  };
+  install: SkillInstallSpec[];
+}
+
+interface SkillStatusReport {
+  workspaceDir: string;
+  managedSkillsDir: string;
+  skills: SkillStatusEntry[];
+}
+
+type SourceGroup = { id: string; label: string; skills: SkillStatusEntry[] };
+
+function groupBySource(skills: SkillStatusEntry[]): SourceGroup[] {
+  const map = new Map<string, SkillStatusEntry[]>();
+  for (const s of skills) {
+    const key = s.source || "other";
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(s);
+  }
+  const order = ["openclaw-tenant", "openclaw-workspace", "agents-skills-project", "agents-skills-personal", "openclaw-managed", "openclaw-extra", "openclaw-bundled"];
+  const groups: SourceGroup[] = [];
+  for (const key of order) {
+    const list = map.get(key);
+    if (list?.length) {
+      groups.push({ id: key, label: sourceLabel(key), skills: list });
+      map.delete(key);
+    }
+  }
+  for (const [key, list] of map) {
+    if (list.length) {
+      groups.push({ id: key, label: sourceLabel(key), skills: list });
+    }
+  }
+  return groups;
+}
+
+function sourceLabel(source: string): string {
+  switch (source) {
+    case "openclaw-workspace": return "工作区技能";
+    case "openclaw-managed": return "已安装技能";
+    case "openclaw-bundled": return "系统内置";
+    case "openclaw-extra": return "扩展技能";
+    case "openclaw-tenant": return "企业技能";
+    case "agents-skills-personal": return "个人技能";
+    case "agents-skills-project": return "项目技能";
+    default: return source.startsWith("openclaw-plugin-") ? `插件: ${source.replace("openclaw-plugin-", "")}` : source;
+  }
+}
+
+@customElement("tenant-skills-view")
+export class TenantSkillsView extends LitElement {
+  static styles = css`
+    :host {
+      display: block; padding: 1.5rem; color: var(--text, #e5e5e5);
+      font-family: var(--font-sans, system-ui, sans-serif);
+    }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    h2 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+    .subtitle { font-size: 0.8rem; color: var(--text-secondary, #a3a3a3); margin-top: 0.25rem; }
+    .btn {
+      padding: 0.45rem 0.9rem; border: none; border-radius: var(--radius-md, 6px);
+      font-size: 0.85rem; cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-outline { background: #525252; border: none; color: #e5e5e5; }
+    .btn-primary { background: var(--accent, #3b82f6); color: #fff; border: none; }
+    .btn-warn { background: #78350f; color: #fbbf24; border: none; }
+    .btn-sm { padding: 0.3rem 0.6rem; font-size: 0.78rem; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .error-msg {
+      background: var(--bg-destructive, #2d1215); border: 1px solid var(--border-destructive, #7f1d1d);
+      border-radius: var(--radius-md, 6px); color: var(--text-destructive, #fca5a5);
+      padding: 0.5rem 0.75rem; font-size: 0.8rem; margin-bottom: 1rem;
+    }
+    .filters {
+      display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;
+    }
+    .filters input {
+      padding: 0.35rem 0.5rem; background: var(--bg, #0a0a0a);
+      border: 1px solid var(--border, #262626); border-radius: var(--radius-md, 6px);
+      color: var(--text, #e5e5e5); font-size: 0.8rem; outline: none; flex: 1; min-width: 160px;
+    }
+    .filters input:focus { border-color: var(--accent, #3b82f6); }
+    .muted { font-size: 0.78rem; color: var(--text-secondary, #a3a3a3); }
+    .group { margin-bottom: 1.5rem; }
+    .group-header {
+      font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;
+      display: flex; align-items: center; gap: 0.5rem; cursor: pointer;
+      user-select: none;
+    }
+    .group-header .count {
+      font-weight: 400; color: var(--text-secondary, #a3a3a3); font-size: 0.78rem;
+    }
+    .skill-list {
+      display: flex; flex-direction: column;
+      border-top: 1px solid var(--border, #262626);
+    }
+    .skill-card {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border, #262626);
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
+    }
+    .skill-card:hover { background: rgba(255, 255, 255, 0.02); }
+    .skill-info { flex: 1; min-width: 0; }
+    .skill-name { font-size: 0.85rem; font-weight: 600; }
+    .skill-desc { font-size: 0.78rem; color: var(--text-secondary, #a3a3a3); margin-top: 0.2rem; }
+    .skill-meta { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem; }
+    .chip {
+      display: inline-block; font-size: 0.75rem; padding: 0.15rem 0.45rem;
+      border-radius: 4px; font-weight: 500;
+      background: #525252; color: #a3a3a3;
+    }
+    .chip-success { background: #059669; color: #6ee7b7; }
+    .chip-warning { background: #78350f; color: #fbbf24; }
+    .chip-danger { background: #7f1d1d; color: #fca5a5; }
+    .skill-actions { display: flex; gap: 0.4rem; flex-shrink: 0; align-items: center; }
+    .empty { text-align: center; padding: 3rem 1rem; color: var(--text-secondary, #a3a3a3); }
+    .loading { text-align: center; padding: 2rem; color: var(--text-secondary, #a3a3a3); }
+  `;
+
+  @property({ type: String }) gatewayUrl = "";
+
+  @state() private _loading = false;
+  @state() private _error = "";
+  @state() private _report: SkillStatusReport | null = null;
+  @state() private _filter = "";
+  @state() private _busyKey = "";
+  @state() private _message: { key: string; kind: "success" | "error"; text: string } | null = null;
+
+  connectedCallback() {
+    super.connectedCallback();
+    this._load();
+  }
+
+  private async _load() {
+    this._loading = true;
+    this._error = "";
+    try {
+      const res = await tenantRpc("skills.status", {}, this.gatewayUrl) as SkillStatusReport;
+      this._report = res;
+    } catch (err) {
+      this._error = err instanceof Error ? err.message : String(err);
+    } finally {
+      this._loading = false;
+    }
+  }
+
+  private async _toggleSkill(skillKey: string, currentlyDisabled: boolean) {
+    this._busyKey = skillKey;
+    this._message = null;
+    try {
+      await tenantRpc("skills.update", { skillKey, enabled: currentlyDisabled }, this.gatewayUrl);
+      this._message = { key: skillKey, kind: "success", text: currentlyDisabled ? "已启用" : "已禁用" };
+      await this._load();
+    } catch (err) {
+      this._message = { key: skillKey, kind: "error", text: err instanceof Error ? err.message : String(err) };
+    } finally {
+      this._busyKey = "";
+    }
+  }
+
+  private async _installSkill(skillKey: string, name: string, installId: string) {
+    this._busyKey = skillKey;
+    this._message = null;
+    try {
+      await tenantRpc("skills.install", { name, installId, timeoutMs: 120000 }, this.gatewayUrl);
+      this._message = { key: skillKey, kind: "success", text: "安装成功" };
+      await this._load();
+    } catch (err) {
+      this._message = { key: skillKey, kind: "error", text: err instanceof Error ? err.message : String(err) };
+    } finally {
+      this._busyKey = "";
+    }
+  }
+
+  render() {
+    return html`
+      <div class="header">
+        <div>
+          <h2>技能管理</h2>
+          <div class="subtitle">查看和管理企业可用的技能</div>
+        </div>
+        <button class="btn btn-outline" ?disabled=${this._loading} @click=${() => this._load()}>
+          ${this._loading ? "加载中..." : "刷新"}
+        </button>
+      </div>
+
+      ${this._error ? html`<div class="error-msg">${this._error}</div>` : nothing}
+
+      ${this._loading && !this._report ? html`<div class="loading">加载中...</div>` : nothing}
+
+      ${this._report ? this._renderReport() : nothing}
+    `;
+  }
+
+  private _renderReport() {
+    const skills = this._report!.skills;
+    const filter = this._filter.trim().toLowerCase();
+    const filtered = filter
+      ? skills.filter((s) => [s.name, s.description, s.source, s.skillKey].join(" ").toLowerCase().includes(filter))
+      : skills;
+    const groups = groupBySource(filtered);
+
+    return html`
+      <div class="filters">
+        <input
+          placeholder="搜索技能..."
+          .value=${this._filter}
+          @input=${(e: Event) => { this._filter = (e.target as HTMLInputElement).value; }}
+        />
+        <span class="muted">${filtered.length} / ${skills.length}</span>
+      </div>
+
+      ${filtered.length === 0
+        ? html`<div class="empty">未找到匹配的技能</div>`
+        : groups.map((g) => this._renderGroup(g))
+      }
+    `;
+  }
+
+  private _renderGroup(group: SourceGroup) {
+    return html`
+      <details class="group" open>
+        <summary class="group-header">
+          <span>${group.label}</span>
+          <span class="count">${group.skills.length}</span>
+        </summary>
+        <div class="skill-list">
+          ${group.skills.map((s) => this._renderSkill(s))}
+        </div>
+      </details>
+    `;
+  }
+
+  private _renderSkill(skill: SkillStatusEntry) {
+    const busy = this._busyKey === skill.skillKey;
+    const msg = this._message?.key === skill.skillKey ? this._message : null;
+    const missingBins = skill.missing.bins.length > 0;
+    const missingEnv = skill.missing.env.length > 0;
+    const canInstall = skill.install.length > 0 && missingBins;
+
+    return html`
+      <div class="skill-card">
+        <div class="skill-info">
+          <div class="skill-name">${skill.emoji ? `${skill.emoji} ` : ""}${skill.name}</div>
+          <div class="skill-desc">${skill.description || "—"}</div>
+          <div class="skill-meta">
+            ${skill.eligible
+              ? html`<span class="chip chip-success">可用</span>`
+              : html`<span class="chip chip-danger">不可用</span>`
+            }
+            ${skill.disabled ? html`<span class="chip chip-warning">已禁用</span>` : nothing}
+            ${skill.bundled ? html`<span class="chip">内置</span>` : nothing}
+            ${missingBins ? html`<span class="chip chip-warning">缺少: ${skill.missing.bins.join(", ")}</span>` : nothing}
+            ${missingEnv ? html`<span class="chip chip-warning">缺少环境变量: ${skill.missing.env.join(", ")}</span>` : nothing}
+          </div>
+          ${msg ? html`<div class="muted" style="margin-top: 0.4rem; color: ${msg.kind === "error" ? "var(--text-destructive, #fca5a5)" : "#4ade80"};">${msg.text}</div>` : nothing}
+        </div>
+        <div class="skill-actions">
+        </div>
+      </div>
+    `;
+  }
+}

@@ -96,6 +96,7 @@ import "./views/tenant/tenant-settings.ts";
 import "./views/tenant/tenant-users.ts";
 import "./views/tenant/tenant-channels.ts";
 import "./views/tenant/tenant-models.ts";
+import "./views/tenant/tenant-skills.ts";
 import "./views/tenant/tenant-traces.ts";
 import "./views/tenant/tenant-usage.ts";
 import { isAuthenticated, loadAuth, clearAuth } from "./auth-store.ts";
@@ -340,7 +341,7 @@ export function renderApp(state: AppViewState) {
           const authState = loadAuth();
           const userRole = authState?.user?.role;
           const isAdmin = userRole === "owner" || userRole === "admin";
-          const adminOnlyTabs = new Set(["tenant-settings", "tenant-users", "tenant-channels", "tenant-models", "tenant-traces", "tenant-usage"]);
+          const adminOnlyTabs = new Set(["tenant-settings", "tenant-users", "tenant-channels", "tenant-models", "tenant-skills", "tenant-traces", "tenant-usage"]);
           const visibleTabs = group.tabs.filter((tab) => isAdmin || !adminOnlyTabs.has(tab));
           if (visibleTabs.length === 0) return nothing;
           const isGroupCollapsed = state.settings.navGroupsCollapsed[group.label] ?? false;
@@ -1405,12 +1406,13 @@ export function renderApp(state: AppViewState) {
         }
 
         ${
-          state.tab === "tenant-settings" || state.tab === "tenant-users" || state.tab === "tenant-channels" || state.tab === "tenant-models" || state.tab === "tenant-traces" || state.tab === "tenant-usage"
+          state.tab === "tenant-settings" || state.tab === "tenant-users" || state.tab === "tenant-channels" || state.tab === "tenant-models" || state.tab === "tenant-skills" || state.tab === "tenant-traces" || state.tab === "tenant-usage"
             ? html`
                   ${state.tab === "tenant-settings" ? html`<tenant-settings-view .gatewayUrl=${state.settings.gatewayUrl}></tenant-settings-view>` : nothing}
                   ${state.tab === "tenant-users" ? html`<tenant-users-view .gatewayUrl=${state.settings.gatewayUrl}></tenant-users-view>` : nothing}
 ${state.tab === "tenant-channels" ? html`<tenant-channels-view .gatewayUrl=${state.settings.gatewayUrl}></tenant-channels-view>` : nothing}
                   ${state.tab === "tenant-models" ? html`<tenant-models-view .gatewayUrl=${state.settings.gatewayUrl}></tenant-models-view>` : nothing}
+                  ${state.tab === "tenant-skills" ? html`<tenant-skills-view .gatewayUrl=${state.settings.gatewayUrl}></tenant-skills-view>` : nothing}
                   ${state.tab === "tenant-traces" ? html`<tenant-traces-view .gatewayUrl=${state.settings.gatewayUrl}></tenant-traces-view>` : nothing}
                   ${state.tab === "tenant-usage" ? html`<tenant-usage-view .gatewayUrl=${state.settings.gatewayUrl}></tenant-usage-view>` : nothing}
                 `
