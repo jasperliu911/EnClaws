@@ -228,6 +228,7 @@ export function buildEmbeddedContextFromTemplate(params: {
     // Multi-tenant context for tenant-scoped tool operations (cron, etc.)
     tenantId: params.sessionCtx.TenantId,
     tenantUserId: params.sessionCtx.TenantUserId,
+    tenantUserRole: params.sessionCtx.TenantUserRole,
     // Provider threading context for tool auto-injection
     ...buildThreadingToolContext({
       sessionCtx: params.sessionCtx,

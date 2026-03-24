@@ -141,6 +141,8 @@ export type MsgContext = {
   TenantId?: string;
   /** Tenant user ID for per-user workspace isolation. */
   TenantUserId?: string;
+  /** Tenant user role for permission checks during tool execution. */
+  TenantUserRole?: string;
   /** Thread identifier (Telegram topic id or Matrix thread event id). */
   MessageThreadId?: string | number;
   /** Telegram forum supergroup marker. */

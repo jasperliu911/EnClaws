@@ -244,6 +244,8 @@ export function createOpenClawCodingTools(options?: {
   tenantId?: string;
   /** Tenant user ID for multi-tenant scoped operations. */
   tenantUserId?: string;
+  /** Tenant user role for permission checks during tool execution. */
+  tenantUserRole?: string;
 }): AnyAgentTool[] {
   const execToolName = "exec";
   const sandbox = options?.sandbox?.enabled ? options.sandbox : undefined;
@@ -553,6 +555,7 @@ export function createOpenClawCodingTools(options?: {
       agentId,
       sessionKey: options?.sessionKey,
       loopDetection: resolveToolLoopDetectionConfig({ cfg: options?.config, agentId }),
+      tenantUserRole: options?.tenantUserRole,
     }),
   );
   const withAbort = options?.abortSignal

@@ -464,6 +464,14 @@ export const PERMISSIONS = {
   "apikey.create": ["owner", "admin"],
   "apikey.delete": ["owner", "admin"],
 
+  // Skill management
+  "skill.list": ["owner", "admin", "member", "viewer"],
+  "skill.use": ["owner", "admin", "member"],
+  "skill.update": ["owner", "admin"],
+  "skill.install": ["owner", "admin"],
+  "skill.create": ["owner", "admin"],
+  "skill.delete": ["owner", "admin"],
+
   // Config
   "config.read": ["owner", "admin", "member"],
   "config.write": ["owner", "admin"],

@@ -510,6 +510,7 @@ export async function runPreparedReply(
       streamParams: buildStreamParams({ modelOptions: opts?.modelOptions }),
       tenantId: sessionCtx.TenantId || undefined,
       tenantUserId: sessionCtx.TenantUserId || undefined,
+      tenantUserRole: sessionCtx.TenantUserRole || undefined,
     },
   };
 

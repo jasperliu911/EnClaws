@@ -91,6 +91,11 @@ export function mapMethodToPermission(method: string): Permission | null {
   if (method === "channels.status") return "channel.list";
   if (method === "channels.logout") return "channel.delete";
 
+  // Skill methods
+  if (method === "skills.status") return "skill.list";
+  if (method === "skills.update") return "skill.update";
+  if (method === "skills.install") return "skill.install";
+
   // Default: allow if authenticated (no specific permission required)
   return null;
 }

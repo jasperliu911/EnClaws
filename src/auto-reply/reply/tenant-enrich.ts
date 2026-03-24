@@ -30,6 +30,27 @@ export async function enrichTenantContext(
   ctx: FinalizedMsgContext,
   cfg: OpenClawConfig,
 ): Promise<void> {
+  // If TenantId is already set but TenantUserRole is missing, resolve the role from DB.
+  if (ctx.TenantId && ctx.TenantUserId && !ctx.TenantUserRole) {
+    try {
+      const { autoProvisionTenantUser } = await import("../../infra/channel-auto-provision.js");
+      const senderId = ctx.SenderId;
+      if (senderId) {
+        const provisioned = await autoProvisionTenantUser({
+          tenantId: ctx.TenantId,
+          openId: senderId,
+          unionId: ctx.SenderUnionId ?? undefined,
+          displayName: ctx.SenderName ?? undefined,
+        });
+        if (provisioned) {
+          ctx.TenantUserRole = provisioned.role;
+        }
+      }
+    } catch {
+      // Non-fatal: continue without role
+    }
+  }
+
   // Skip if the plugin already injected tenant info (e.g. the old built-in feishu plugin)
   if (ctx.TenantId) return;
 
@@ -59,9 +80,10 @@ export async function enrichTenantContext(
     if (provisioned) {
       ctx.TenantId = tenantId;
       ctx.TenantUserId = provisioned.unionId;
+      ctx.TenantUserRole = provisioned.role;
       logVerbose(
         `[tenant-enrich] auto-provisioned: provider=${provider} senderId=${senderId} ` +
-        `userId=${provisioned.userId} unionId=${provisioned.unionId} created=${provisioned.userCreated}`,
+        `userId=${provisioned.userId} unionId=${provisioned.unionId} role=${provisioned.role} created=${provisioned.userCreated}`,
       );
     }
   } catch (err) {

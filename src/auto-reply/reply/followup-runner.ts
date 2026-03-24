@@ -192,6 +192,7 @@ export function createFollowupRunner(params: {
               blockReplyBreak: queued.run.blockReplyBreak,
               tenantId: queued.run.tenantId,
               tenantUserId: queued.run.tenantUserId,
+              tenantUserRole: queued.run.tenantUserRole,
               onAgentEvent: (evt) => {
                 if (evt.stream !== "compaction") {
                   return;

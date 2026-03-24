@@ -545,6 +545,11 @@ export async function runEmbeddedAttempt(
       config: params.config,
       sessionAgentId,
     });
+    // Register tenant user role for skill permission checks during tool execution.
+    if (params.tenantId && params.tenantUserId && params.tenantUserRole) {
+      const { setTenantUserRole } = await import("../../pi-tools.before-tool-call.js");
+      setTenantUserRole(params.tenantId, params.tenantUserId, params.tenantUserRole);
+    }
     // Check if the model supports native image input
     const modelHasVision = params.model.input?.includes("image") ?? false;
     const toolsRaw = params.disableTools
@@ -590,6 +595,7 @@ export async function runEmbeddedAttempt(
           iterationDepth: params.iterationDepth,
           tenantId: params.tenantId,
           tenantUserId: params.tenantUserId,
+          tenantUserRole: params.tenantUserRole,
         });
     const tools = sanitizeToolsForGoogle({ tools: toolsRaw, provider: params.provider });
     const allowedToolNames = collectAllowedToolNames({

@@ -10,7 +10,54 @@ export type HookContext = {
   agentId?: string;
   sessionKey?: string;
   loopDetection?: ToolLoopDetectionConfig;
+  /** Tenant user role for permission checks (e.g. blocking skill writes for non-admin). */
+  tenantUserRole?: string;
 };
+
+/**
+ * Runtime tenant role registry, keyed by tenantId:userId.
+ * Uses globalThis to survive Vite code-splitting (module may be duplicated across chunks).
+ * Entries have a TTL to pick up role changes (e.g., admin demoting a user).
+ */
+const GLOBAL_KEY = "__openclaw_tenant_user_roles__";
+const MAX_TENANT_ROLE_ENTRIES = 1024;
+const ROLE_TTL_MS = 10 * 60 * 1000; // 10 minutes, aligned with auto-provision cache
+
+type RoleEntry = { role: string; expiresAt: number };
+
+function getTenantUserRoleMap(): Map<string, RoleEntry> {
+  const g = globalThis as Record<string, unknown>;
+  if (!g[GLOBAL_KEY]) {
+    g[GLOBAL_KEY] = new Map<string, RoleEntry>();
+  }
+  return g[GLOBAL_KEY] as Map<string, RoleEntry>;
+}
+
+export function setTenantUserRole(tenantId: string, userId: string, role: string): void {
+  const map = getTenantUserRoleMap();
+  const key = `${tenantId}:${userId}`;
+  map.set(key, { role, expiresAt: Date.now() + ROLE_TTL_MS });
+  if (map.size > MAX_TENANT_ROLE_ENTRIES) {
+    const oldest = map.keys().next().value;
+    if (oldest) map.delete(oldest);
+  }
+}
+
+export function getTenantUserRole(tenantId: string, userId: string): string | undefined {
+  const entry = getTenantUserRoleMap().get(`${tenantId}:${userId}`);
+  if (!entry) return undefined;
+  if (entry.expiresAt < Date.now()) {
+    getTenantUserRoleMap().delete(`${tenantId}:${userId}`);
+    return undefined;
+  }
+  return entry.role;
+}
+
+/** Extract tenantId from a file path like .../tenants/{tenantId}/skills/... */
+function extractTenantIdFromPath(filePath: string): string | undefined {
+  const match = filePath.replace(/\\/g, "/").match(/tenants\/([^/]+)\//);
+  return match?.[1];
+}
 
 type HookOutcome = { blocked: true; reason: string } | { blocked: false; params: unknown };
 
@@ -71,6 +118,100 @@ async function recordLoopOutcome(args: {
   }
 }
 
+/**
+ * Check if a tool call targets a skills directory and the user lacks permission.
+ * Returns a block reason if denied, or null if allowed.
+ */
+/** Tools that can modify the filesystem. */
+const WRITE_TOOLS = new Set(["write", "edit", "apply_patch", "exec", "process"]);
+
+/**
+ * Resolve role for the current tool call.
+ * Uses the exact tenantId:userId key — never falls back to "any user in this tenant".
+ */
+function resolveRoleForToolCall(toolName: string, params: unknown, ctx?: HookContext): { role: string | undefined; isTenantPath: boolean } {
+  // Static context (set at tool creation time, usually empty for long-lived tools)
+  if (ctx?.tenantUserRole) return { role: ctx.tenantUserRole, isTenantPath: true };
+
+  // Extract tenantId from the tool params path
+  const p = params as Record<string, unknown> | undefined;
+  if (!p) return { role: undefined, isTenantPath: false };
+
+  let pathStr = "";
+  if (toolName === "exec" || toolName === "process") {
+    pathStr = String(p.command ?? p.cmd ?? "");
+  } else {
+    pathStr = String(p.file_path ?? p.filePath ?? p.path ?? "");
+  }
+
+  const tenantId = extractTenantIdFromPath(pathStr);
+  if (!tenantId) return { role: undefined, isTenantPath: false };
+
+  // Look up role by exact tenantId:userId key
+  const map = getTenantUserRoleMap();
+  const now = Date.now();
+  for (const [key, entry] of map) {
+    if (key.startsWith(`${tenantId}:`)) {
+      if (entry.expiresAt < now) {
+        map.delete(key);
+        continue;
+      }
+      return { role: entry.role, isTenantPath: true };
+    }
+  }
+  // Path is under a tenant dir but no role found
+  return { role: undefined, isTenantPath: true };
+}
+
+/**
+ * Detect if an exec/process command targets a skills directory.
+ * Matches any command containing a skills path — regardless of the specific
+ * write verb, since there are too many ways to modify files (sed, python, node,
+ * perl, shell redirection, etc.) to maintain a reliable allowlist.
+ */
+function execCommandTargetsSkills(command: string): boolean {
+  return /[/\\]skills[/\\]/i.test(command);
+}
+
+function checkSkillWritePermission(toolName: string, params: unknown, ctx?: HookContext): string | null {
+  if (!WRITE_TOOLS.has(toolName)) return null;
+
+  const p = params as Record<string, unknown> | undefined;
+  if (!p) return null;
+
+  // Check if the operation targets a skills directory
+  let targetsSkills = false;
+  if (toolName === "exec" || toolName === "process") {
+    const command = String(p.command ?? p.cmd ?? "");
+    targetsSkills = execCommandTargetsSkills(command);
+  } else {
+    const targetPath = String(p.file_path ?? p.filePath ?? p.path ?? "");
+    targetsSkills = /[/\\]skills[/\\]/i.test(targetPath);
+  }
+
+  if (!targetsSkills) return null;
+
+  // Targets skills dir — resolve role (fail-closed for tenant paths)
+  const { role, isTenantPath } = resolveRoleForToolCall(toolName, params, ctx);
+
+  // Non-tenant path (single-user mode): allow
+  if (!isTenantPath) return null;
+
+  // Owner and admin: allow
+  if (role === "owner" || role === "admin") return null;
+
+  // Role is member/viewer: deny
+  if (role) {
+    const reason = `Permission denied: role '${role}' cannot modify skills. Only owner and admin can manage skills.`;
+    log.warn(`[skill-permission] blocked ${toolName} for role=${role}`);
+    return reason;
+  }
+
+  // Tenant path but role unknown (DB lookup failed, context lost, etc.): deny
+  log.warn(`[skill-permission] blocked ${toolName}: tenant path detected but role could not be resolved`);
+  return "Permission denied: unable to verify skill management permission. Please contact an administrator.";
+}
+
 export async function runBeforeToolCallHook(args: {
   toolName: string;
   params: unknown;
@@ -79,6 +220,12 @@ export async function runBeforeToolCallHook(args: {
 }): Promise<HookOutcome> {
   const toolName = normalizeToolName(args.toolName || "tool");
   const params = args.params;
+
+  // Check skill write permission before any other processing
+  const skillDenied = checkSkillWritePermission(toolName, params, args.ctx);
+  if (skillDenied) {
+    return { blocked: true, reason: skillDenied };
+  }
 
   if (args.ctx?.sessionKey) {
     const { getDiagnosticSessionState } = await import("../logging/diagnostic-session-state.js");

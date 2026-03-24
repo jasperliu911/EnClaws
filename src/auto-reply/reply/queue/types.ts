@@ -83,6 +83,8 @@ export type FollowupRun = {
     tenantId?: string;
     /** Tenant user ID (union_id) for multi-tenant scoped operations. */
     tenantUserId?: string;
+    /** Tenant user role for permission checks during tool execution. */
+    tenantUserRole?: string;
   };
 };
 
