@@ -7,6 +7,7 @@
 
 import { html, css, LitElement, nothing } from "lit";
 import { customElement, state, property } from "lit/decorators.js";
+import { t, I18nController } from "../../../i18n/index.ts";
 import { tenantRpc } from "./rpc.ts";
 
 interface SkillInstallSpec {
@@ -79,19 +80,21 @@ function groupBySource(skills: SkillStatusEntry[]): SourceGroup[] {
 
 function sourceLabel(source: string): string {
   switch (source) {
-    case "openclaw-workspace": return "工作区技能";
-    case "openclaw-managed": return "已安装技能";
-    case "openclaw-bundled": return "系统内置";
-    case "openclaw-extra": return "扩展技能";
-    case "openclaw-tenant": return "企业技能";
-    case "agents-skills-personal": return "个人技能";
-    case "agents-skills-project": return "项目技能";
-    default: return source.startsWith("openclaw-plugin-") ? `插件: ${source.replace("openclaw-plugin-", "")}` : source;
+    case "openclaw-workspace": return t("tenantSkills.sourceWorkspace");
+    case "openclaw-managed": return t("tenantSkills.sourceManaged");
+    case "openclaw-bundled": return t("tenantSkills.sourceBundled");
+    case "openclaw-extra": return t("tenantSkills.sourceExtra");
+    case "openclaw-tenant": return t("tenantSkills.sourceTenant");
+    case "agents-skills-personal": return t("tenantSkills.sourcePersonal");
+    case "agents-skills-project": return t("tenantSkills.sourceProject");
+    default: return source.startsWith("openclaw-plugin-") ? t("tenantSkills.sourcePlugin", { name: source.replace("openclaw-plugin-", "") }) : source;
   }
 }
 
 @customElement("tenant-skills-view")
 export class TenantSkillsView extends LitElement {
+  private i18nCtrl = new I18nController(this);
+
   static styles = css`
     :host {
       display: block; padding: 1.5rem; color: var(--text, #e5e5e5);
@@ -105,7 +108,7 @@ export class TenantSkillsView extends LitElement {
       font-size: 0.85rem; cursor: pointer; transition: opacity 0.15s;
     }
     .btn:hover { opacity: 0.85; }
-    .btn-outline { background: #525252; border: none; color: #e5e5e5; }
+    .btn-outline { background: transparent; border: 1px solid var(--border, #262626); color: var(--text, #e5e5e5); }
     .btn-primary { background: var(--accent, #3b82f6); color: #fff; border: none; }
     .btn-warn { background: #78350f; color: #fbbf24; border: none; }
     .btn-sm { padding: 0.3rem 0.6rem; font-size: 0.78rem; }
@@ -123,6 +126,7 @@ export class TenantSkillsView extends LitElement {
       border: 1px solid var(--border, #262626); border-radius: var(--radius-md, 6px);
       color: var(--text, #e5e5e5); font-size: 0.8rem; outline: none; flex: 1; min-width: 160px;
     }
+    .filters label { font-size: 0.8rem; color: var(--text-secondary, #a3a3a3); }
     .filters input:focus { border-color: var(--accent, #3b82f6); }
     .muted { font-size: 0.78rem; color: var(--text-secondary, #a3a3a3); }
     .group { margin-bottom: 1.5rem; }
@@ -193,7 +197,7 @@ export class TenantSkillsView extends LitElement {
     this._message = null;
     try {
       await tenantRpc("skills.update", { skillKey, enabled: currentlyDisabled }, this.gatewayUrl);
-      this._message = { key: skillKey, kind: "success", text: currentlyDisabled ? "已启用" : "已禁用" };
+      this._message = { key: skillKey, kind: "success", text: currentlyDisabled ? t("tenantSkills.enabled") : t("tenantSkills.justDisabled") };
       await this._load();
     } catch (err) {
       this._message = { key: skillKey, kind: "error", text: err instanceof Error ? err.message : String(err) };
@@ -207,7 +211,7 @@ export class TenantSkillsView extends LitElement {
     this._message = null;
     try {
       await tenantRpc("skills.install", { name, installId, timeoutMs: 120000 }, this.gatewayUrl);
-      this._message = { key: skillKey, kind: "success", text: "安装成功" };
+      this._message = { key: skillKey, kind: "success", text: t("tenantSkills.installSuccess") };
       await this._load();
     } catch (err) {
       this._message = { key: skillKey, kind: "error", text: err instanceof Error ? err.message : String(err) };
@@ -220,17 +224,16 @@ export class TenantSkillsView extends LitElement {
     return html`
       <div class="header">
         <div>
-          <h2>技能管理</h2>
-          <div class="subtitle">查看和管理企业可用的技能</div>
+          <h2>${t("tenantSkills.title")}</h2>
         </div>
         <button class="btn btn-outline" ?disabled=${this._loading} @click=${() => this._load()}>
-          ${this._loading ? "加载中..." : "刷新"}
+          ${this._loading ? t("tenantSkills.loading") : t("tenantSkills.refresh")}
         </button>
       </div>
 
       ${this._error ? html`<div class="error-msg">${this._error}</div>` : nothing}
 
-      ${this._loading && !this._report ? html`<div class="loading">加载中...</div>` : nothing}
+      ${this._loading && !this._report ? html`<div class="loading">${t("tenantSkills.loading")}</div>` : nothing}
 
       ${this._report ? this._renderReport() : nothing}
     `;
@@ -246,8 +249,9 @@ export class TenantSkillsView extends LitElement {
 
     return html`
       <div class="filters">
-        <input
-          placeholder="搜索技能..."
+        <label>${t("tenantSkills.skillName")}</label>
+        <input type="text"
+          .placeholder=${t("tenantSkills.searchPlaceholder")}
           .value=${this._filter}
           @input=${(e: Event) => { this._filter = (e.target as HTMLInputElement).value; }}
         />
@@ -255,7 +259,7 @@ export class TenantSkillsView extends LitElement {
       </div>
 
       ${filtered.length === 0
-        ? html`<div class="empty">未找到匹配的技能</div>`
+        ? html`<div class="empty">${t("tenantSkills.noMatch")}</div>`
         : groups.map((g) => this._renderGroup(g))
       }
     `;
@@ -289,13 +293,13 @@ export class TenantSkillsView extends LitElement {
           <div class="skill-desc">${skill.description || "—"}</div>
           <div class="skill-meta">
             ${skill.eligible
-              ? html`<span class="chip chip-success">可用</span>`
-              : html`<span class="chip chip-danger">不可用</span>`
+              ? html`<span class="chip chip-success">${t("tenantSkills.available")}</span>`
+              : html`<span class="chip chip-danger">${t("tenantSkills.unavailable")}</span>`
             }
-            ${skill.disabled ? html`<span class="chip chip-warning">已禁用</span>` : nothing}
-            ${skill.bundled ? html`<span class="chip">内置</span>` : nothing}
-            ${missingBins ? html`<span class="chip chip-warning">缺少: ${skill.missing.bins.join(", ")}</span>` : nothing}
-            ${missingEnv ? html`<span class="chip chip-warning">缺少环境变量: ${skill.missing.env.join(", ")}</span>` : nothing}
+            ${skill.disabled ? html`<span class="chip chip-warning">${t("tenantSkills.disabled")}</span>` : nothing}
+            ${skill.bundled ? html`<span class="chip">${t("tenantSkills.builtin")}</span>` : nothing}
+            ${missingBins ? html`<span class="chip chip-warning">${t("tenantSkills.missingBins", { bins: skill.missing.bins.join(", ") })}</span>` : nothing}
+            ${missingEnv ? html`<span class="chip chip-warning">${t("tenantSkills.missingEnv", { env: skill.missing.env.join(", ") })}</span>` : nothing}
           </div>
           ${msg ? html`<div class="muted" style="margin-top: 0.4rem; color: ${msg.kind === "error" ? "var(--text-destructive, #fca5a5)" : "#4ade80"};">${msg.text}</div>` : nothing}
         </div>
