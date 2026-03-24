@@ -6,6 +6,7 @@
 
 import { html, css, LitElement, nothing } from "lit";
 import { customElement, state, property } from "lit/decorators.js";
+import { t, i18n, I18nController } from "../../../i18n/index.ts";
 import { loadAuth } from "../../auth-store.ts";
 import { tenantRpc } from "./rpc.ts";
 
@@ -21,6 +22,8 @@ interface TenantUser {
 
 @customElement("tenant-users-view")
 export class TenantUsersView extends LitElement {
+  private i18nCtrl = new I18nController(this);
+
   static styles = css`
     :host {
       display: block;
@@ -169,8 +172,9 @@ export class TenantUsersView extends LitElement {
   @property({ type: String }) gatewayUrl = "";
   @state() private users: TenantUser[] = [];
   @state() private loading = false;
-  @state() private error = "";
-  @state() private success = "";
+  @state() private errorKey = "";
+  @state() private successKey = "";
+  private msgParams: Record<string, string> = {};
   private msgTimer?: ReturnType<typeof setTimeout>;
   @state() private showInvite = false;
   @state() private inviteEmail = "";
@@ -188,28 +192,45 @@ export class TenantUsersView extends LitElement {
     return tenantRpc(method, params, this.gatewayUrl);
   }
 
-  private showError(msg: string) {
-    this.error = msg;
-    this.success = "";
+  private showError(key: string, params?: Record<string, string>) {
+    this.errorKey = key;
+    this.successKey = "";
+    this.msgParams = params ?? {};
     if (this.msgTimer) clearTimeout(this.msgTimer);
-    this.msgTimer = setTimeout(() => (this.error = ""), 5000);
+    this.msgTimer = setTimeout(() => (this.errorKey = ""), 5000);
   }
 
-  private showSuccess(msg: string) {
-    this.success = msg;
-    this.error = "";
+  private showSuccess(key: string, params?: Record<string, string>) {
+    this.successKey = key;
+    this.errorKey = "";
+    this.msgParams = params ?? {};
     if (this.msgTimer) clearTimeout(this.msgTimer);
-    this.msgTimer = setTimeout(() => (this.success = ""), 5000);
+    this.msgTimer = setTimeout(() => (this.successKey = ""), 5000);
+  }
+
+  private tr(key: string): string {
+    if (key.includes("已注册") || key.includes("duplicate key") || key.includes("unique constraint")) return t("tenantUsers.emailAlreadyRegistered");
+    const result = t(key, this.msgParams);
+    return result === key ? key : result;
+  }
+
+  private get currentLocaleTag(): string {
+    const loc = i18n.getLocale();
+    if (loc === "zh-CN") return "zh-CN";
+    if (loc === "zh-TW") return "zh-TW";
+    if (loc === "de") return "de-DE";
+    if (loc === "pt-BR") return "pt-BR";
+    return "en-US";
   }
 
   private async loadUsers() {
     this.loading = true;
-    this.error = "";
+    this.errorKey = "";
     try {
       const result = await this.rpc("tenant.users.list") as { users: TenantUser[] };
       this.users = result.users ?? [];
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : "加载用户列表失败");
+      this.showError(err instanceof Error ? err.message : "tenantUsers.loadFailed");
     } finally {
       this.loading = false;
     }
@@ -219,8 +240,8 @@ export class TenantUsersView extends LitElement {
     e.preventDefault();
     if (!this.inviteEmail || !this.invitePassword) return;
     this.inviting = true;
-    this.error = "";
-    this.success = "";
+    this.errorKey = "";
+    this.successKey = "";
     try {
       await this.rpc("tenant.users.invite", {
         email: this.inviteEmail,
@@ -228,42 +249,61 @@ export class TenantUsersView extends LitElement {
         role: this.inviteRole,
         displayName: this.inviteDisplayName || undefined,
       });
-      this.showSuccess(`已成功邀请 ${this.inviteEmail}`);
+      this.showSuccess("tenantUsers.invited", { email: this.inviteEmail });
       this.inviteEmail = "";
       this.invitePassword = "";
       this.inviteDisplayName = "";
       this.showInvite = false;
       await this.loadUsers();
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : "邀请失败");
+      this.showError(err instanceof Error ? err.message : "tenantUsers.inviteFailed");
     } finally {
       this.inviting = false;
     }
   }
 
   private async handleRoleChange(userId: string, newRole: string) {
-    this.error = "";
+    this.errorKey = "";
     try {
       await this.rpc("tenant.users.update", { userId, role: newRole });
       await this.loadUsers();
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : "更新角色失败");
+      this.showError(err instanceof Error ? err.message : "tenantUsers.roleUpdateFailed");
     }
   }
 
   private async handleToggleStatus(userId: string, displayName: string | null, email: string | null, currentStatus: string) {
     const label = displayName || email || userId;
     const newStatus = currentStatus === "active" ? "suspended" : "active";
-    const action = newStatus === "suspended" ? "禁用" : "启用";
-    if (!confirm(`确定要${action}用户 ${label} 吗？`)) return;
-    this.error = "";
+    this.errorKey = "";
     try {
       await this.rpc("tenant.users.update", { userId, status: newStatus });
-      this.showSuccess(`已${action} ${label}`);
+      const successKey = newStatus === "suspended" ? "tenantUsers.suspended" : "tenantUsers.activated";
+      this.showSuccess(successKey, { name: label });
       await this.loadUsers();
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : `${action}失败`);
+      const failKey = newStatus === "suspended" ? "tenantUsers.suspendFailed" : "tenantUsers.activateFailed";
+      this.showError(err instanceof Error ? err.message : failKey);
     }
+  }
+
+  private roleLabel(role: string): string {
+    const map: Record<string, string> = {
+      owner: t("tenantUsers.roleOwner"),
+      admin: t("tenantUsers.roleAdmin"),
+      member: t("tenantUsers.roleMember"),
+      viewer: t("tenantUsers.roleViewer"),
+    };
+    return map[role] ?? role;
+  }
+
+  private statusLabel(status: string): string {
+    const map: Record<string, string> = {
+      active: t("tenantUsers.statusActive"),
+      suspended: t("tenantUsers.statusSuspended"),
+      deleted: t("tenantUsers.statusDeleted"),
+    };
+    return map[status] ?? status;
   }
 
   render() {
@@ -273,22 +313,22 @@ export class TenantUsersView extends LitElement {
 
     return html`
       <div class="header">
-        <h2>用户管理</h2>
+        <h2>${t("tenantUsers.title")}</h2>
       </div>
 
-      ${this.error ? html`<div class="error-msg">${this.error}</div>` : nothing}
-      ${this.success ? html`<div class="success-msg">${this.success}</div>` : nothing}
+      ${this.errorKey ? html`<div class="error-msg">${this.tr(this.errorKey)}</div>` : nothing}
+      ${this.successKey ? html`<div class="success-msg">${this.tr(this.successKey)}</div>` : nothing}
 
-      ${this.loading ? html`<div class="loading">加载中...</div>` : this.users.length === 0 ? html`<div class="empty">暂无用户</div>` : html`
+      ${this.loading ? html`<div class="loading">${t("tenantUsers.loading")}</div>` : this.users.length === 0 ? html`<div class="empty">${t("tenantUsers.empty")}</div>` : html`
         <table>
           <thead>
             <tr>
-              <th>邮箱</th>
-              <th>姓名</th>
-              <th>角色</th>
-              <th>状态</th>
-              <th>最后登录</th>
-              <th>操作</th>
+              <th>${t("tenantUsers.email")}</th>
+              <th>${t("tenantUsers.displayName")}</th>
+              <th>${t("tenantUsers.role")}</th>
+              <th>${t("tenantUsers.status")}</th>
+              <th>${t("tenantUsers.lastLogin")}</th>
+              <th>${t("tenantUsers.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -302,7 +342,7 @@ export class TenantUsersView extends LitElement {
                 <td>
                   <span class="status-badge ${user.status}">${this.statusLabel(user.status)}</span>
                 </td>
-                <td>${user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString("zh-CN") : "-"}</td>
+                <td>${user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString(this.currentLocaleTag) : "-"}</td>
                 <td>
                   <div class="actions">
                     ${user.id !== currentUserId && user.role !== "owner" ? html`
@@ -310,17 +350,17 @@ export class TenantUsersView extends LitElement {
                         <select class="btn btn-sm"
                           .value=${user.role}
                           @change=${(e: Event) => this.handleRoleChange(user.id, (e.target as HTMLSelectElement).value)}>
-                          <option value="admin" ?selected=${user.role === "admin"}>管理员</option>
-                          <option value="member" ?selected=${user.role === "member"}>成员</option>
-                          <option value="viewer" ?selected=${user.role === "viewer"}>只读</option>
+                          <option value="admin" ?selected=${user.role === "admin"}>${t("tenantUsers.roleAdmin")}</option>
+                          <option value="member" ?selected=${user.role === "member"}>${t("tenantUsers.roleMember")}</option>
+                          <option value="viewer" ?selected=${user.role === "viewer"}>${t("tenantUsers.roleViewer")}</option>
                         </select>
                       ` : nothing}
                       ${user.status === "active" ? html`
                         <button class="btn btn-warn btn-sm"
-                          @click=${() => this.handleToggleStatus(user.id, user.displayName, user.email, user.status)}>禁用</button>
+                          @click=${() => this.handleToggleStatus(user.id, user.displayName, user.email, user.status)}>${t("tenantUsers.suspend")}</button>
                       ` : html`
                         <button class="btn btn-success btn-sm"
-                          @click=${() => this.handleToggleStatus(user.id, user.displayName, user.email, user.status)}>启用</button>
+                          @click=${() => this.handleToggleStatus(user.id, user.displayName, user.email, user.status)}>${t("tenantUsers.activate")}</button>
                       `}
                     ` : nothing}
                   </div>
@@ -331,19 +371,5 @@ export class TenantUsersView extends LitElement {
         </table>
       `}
     `;
-  }
-
-  private roleLabel(role: string): string {
-    const map: Record<string, string> = {
-      owner: "所有者", admin: "管理员", member: "成员", viewer: "只读",
-    };
-    return map[role] ?? role;
-  }
-
-  private statusLabel(status: string): string {
-    const map: Record<string, string> = {
-      active: "正常", suspended: "已禁用", deleted: "已删除",
-    };
-    return map[status] ?? status;
   }
 }

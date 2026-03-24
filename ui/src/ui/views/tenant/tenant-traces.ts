@@ -7,6 +7,7 @@
 
 import { html, css, LitElement, nothing } from "lit";
 import { customElement, state, property } from "lit/decorators.js";
+import { t, i18n, I18nController } from "../../../i18n/index.ts";
 import { tenantRpc } from "./rpc.ts";
 
 interface TurnSummary {
@@ -48,6 +49,8 @@ interface InteractionTrace {
 
 @customElement("tenant-traces-view")
 export class TenantTracesView extends LitElement {
+  private i18nCtrl = new I18nController(this);
+
   static styles = css`
     :host {
       display: block; padding: 1.5rem; color: var(--text, #e5e5e5);
@@ -160,7 +163,7 @@ export class TenantTracesView extends LitElement {
   @state() private turns: TurnSummary[] = [];
   @state() private total = 0;
   @state() private loading = false;
-  @state() private error = "";
+  @state() private errorKey = "";
   private msgTimer?: ReturnType<typeof setTimeout>;
   @state() private page = 0;
   @state() private pageSize = 20;
@@ -178,10 +181,15 @@ export class TenantTracesView extends LitElement {
   // Active section per interaction: only one visible at a time per trace
   @state() private activeSection = new Map<string, string>();
 
-  private showError(msg: string) {
-    this.error = msg;
+  private showError(key: string) {
+    this.errorKey = key;
     if (this.msgTimer) clearTimeout(this.msgTimer);
-    this.msgTimer = setTimeout(() => (this.error = ""), 5000);
+    this.msgTimer = setTimeout(() => (this.errorKey = ""), 5000);
+  }
+
+  private tr(key: string): string {
+    const result = t(key);
+    return result === key ? key : result;
   }
 
   connectedCallback() {
@@ -195,7 +203,7 @@ export class TenantTracesView extends LitElement {
 
   private async loadTurns() {
     this.loading = true;
-    this.error = "";
+    this.errorKey = "";
     try {
       const result = (await this.rpc("tenant.traces.turns", {
         agentId: this.filterAgentId || undefined,
@@ -207,7 +215,7 @@ export class TenantTracesView extends LitElement {
       this.turns = result.turns;
       this.total = result.total;
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : "加载失败");
+      this.showError(err instanceof Error ? err.message : "tenantTraces.loadFailed");
     } finally {
       this.loading = false;
     }
@@ -229,7 +237,7 @@ export class TenantTracesView extends LitElement {
       };
       this.expandedTraces = result.traces;
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : "加载详情失败");
+      this.showError(err instanceof Error ? err.message : "tenantTraces.loadDetailFailed");
     } finally {
       this.expandedLoading = false;
     }
@@ -238,9 +246,9 @@ export class TenantTracesView extends LitElement {
   private toggleSection(traceId: string, section: string) {
     const current = new Map(this.activeSection);
     if (current.get(traceId) === section) {
-      current.delete(traceId); // toggle off
+      current.delete(traceId);
     } else {
-      current.set(traceId, section); // switch to this section
+      current.set(traceId, section);
     }
     this.activeSection = current;
   }
@@ -249,9 +257,18 @@ export class TenantTracesView extends LitElement {
     return this.activeSection.get(traceId) === section;
   }
 
+  private get currentLocaleTag(): string {
+    const loc = i18n.getLocale();
+    if (loc === "zh-CN") return "zh-CN";
+    if (loc === "zh-TW") return "zh-TW";
+    if (loc === "de") return "de-DE";
+    if (loc === "pt-BR") return "pt-BR";
+    return "en-US";
+  }
+
   private formatTime(iso: string): string {
     const d = new Date(iso);
-    return d.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    return d.toLocaleString(this.currentLocaleTag, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
   }
 
   private formatTokens(n: number): string {
@@ -275,7 +292,7 @@ export class TenantTracesView extends LitElement {
   }
 
   private truncate(text: string | null, max = 80): string {
-    if (!text) return "(empty)";
+    if (!text) return t("tenantTraces.noInput");
     return text.length > max ? text.slice(0, max) + "..." : text;
   }
 
@@ -286,7 +303,7 @@ export class TenantTracesView extends LitElement {
       <div class="turn-card ${isExpanded ? "expanded" : ""}" @click=${() => this.toggleTurn(turn.turnId)}>
         <div class="turn-header">
           <div style="flex:1;min-width:0">
-            <div class="turn-input">${this.truncate(turn.userInput, 120) || "(no input)"}</div>
+            <div class="turn-input">${this.truncate(turn.userInput, 120)}</div>
             <div class="turn-meta">
               <span>${this.formatTime(turn.createdAt)}</span>
               ${turn.agentId ? html`<span>Agent: ${turn.agentId}</span>` : nothing}
@@ -294,7 +311,7 @@ export class TenantTracesView extends LitElement {
             </div>
           </div>
           <div style="display:flex;gap:0.35rem;flex-shrink:0">
-            <span class="badge badge-rounds">${turn.interactionCount} 轮</span>
+            <span class="badge badge-rounds">${t("tenantTraces.rounds", { count: String(turn.interactionCount) })}</span>
             <span class="badge badge-tokens">${this.formatTokens(totalTokens)} tokens</span>
             <span class="badge badge-time">${this.formatDuration(turn.totalDurationMs)}</span>
           </div>
@@ -307,10 +324,10 @@ export class TenantTracesView extends LitElement {
 
   private renderExpandedTurn() {
     if (this.expandedLoading) {
-      return html`<div class="interactions"><div class="loading">加载中...</div></div>`;
+      return html`<div class="interactions"><div class="loading">${t("tenantTraces.loading")}</div></div>`;
     }
     if (this.expandedTraces.length === 0) {
-      return html`<div class="interactions"><div class="empty">无交互记录</div></div>`;
+      return html`<div class="interactions"><div class="empty">${t("tenantTraces.noRecords")}</div></div>`;
     }
     return html`
       <div class="interactions" @click=${(e: Event) => e.stopPropagation()}>
@@ -328,7 +345,7 @@ export class TenantTracesView extends LitElement {
       <div class="interaction">
         <div class="interaction-header">
           <div>
-            <span style="color:var(--accent,#3b82f6)">[轮次 ${trace.turnIndex}]</span>
+            <span style="color:var(--accent,#3b82f6)">[${t("tenantTraces.turnIndex", { index: String(trace.turnIndex) })}]</span>
             ${trace.provider ? html`<span style="margin-left:0.5rem;color:var(--text-secondary)">${trace.provider}/${trace.model}</span>` : nothing}
             ${trace.stopReason || trace.errorMessage
               ? html`<span class="stop-reason ${stopClass}" style="margin-left:0.5rem">${trace.errorMessage ? "error" : trace.stopReason}</span>`
@@ -345,32 +362,32 @@ export class TenantTracesView extends LitElement {
         <div style="display:flex;flex-wrap:wrap;gap:0.25rem;margin-top:0.25rem">
           <button class="collapsible-toggle ${this.isSectionVisible(trace.id, "system") ? "active" : ""}"
             @click=${() => this.toggleSection(trace.id, "system")}>
-            System Prompt
+            ${t("tenantTraces.systemPrompt")}
           </button>
           <button class="collapsible-toggle ${this.isSectionVisible(trace.id, "messages") ? "active" : ""}"
             @click=${() => this.toggleSection(trace.id, "messages")}>
-            Messages (${messagesCount})
+            ${t("tenantTraces.messages")} (${messagesCount})
           </button>
           ${toolsCount > 0 ? html`
             <button class="collapsible-toggle ${this.isSectionVisible(trace.id, "tools") ? "active" : ""}"
               @click=${() => this.toggleSection(trace.id, "tools")}>
-              Tools (${toolsCount})
+              ${t("tenantTraces.tools")} (${toolsCount})
             </button>
           ` : nothing}
           <button class="collapsible-toggle ${this.isSectionVisible(trace.id, "response") ? "active" : ""}"
             @click=${() => this.toggleSection(trace.id, "response")}>
-            Response
+            ${t("tenantTraces.response")}
           </button>
           ${trace.errorMessage ? html`
             <button class="collapsible-toggle ${this.isSectionVisible(trace.id, "error") ? "active" : ""}"
               @click=${() => this.toggleSection(trace.id, "error")}>
-              Error
+              ${t("tenantTraces.error")}
             </button>
           ` : nothing}
         </div>
 
         ${this.isSectionVisible(trace.id, "system")
-          ? html`<div class="code-block">${trace.systemPrompt ?? "(none)"}</div>`
+          ? html`<div class="code-block">${trace.systemPrompt ?? t("tenantTraces.none")}</div>`
           : nothing}
         ${this.isSectionVisible(trace.id, "messages")
           ? html`<div class="code-block">${this.formatJson(trace.messages)}</div>`
@@ -391,28 +408,28 @@ export class TenantTracesView extends LitElement {
   render() {
     return html`
       <div class="header">
-        <h2>LLM 交互追踪</h2>
-        <button class="btn btn-outline" @click=${() => this.loadTurns()}>刷新</button>
+        <h2>${t("tenantTraces.title")}</h2>
+        <button class="btn btn-outline" @click=${() => this.loadTurns()}>${t("tenantTraces.refresh")}</button>
       </div>
 
-      ${this.error ? html`<div class="error-msg">${this.error}</div>` : nothing}
+      ${this.errorKey ? html`<div class="error-msg">${this.tr(this.errorKey)}</div>` : nothing}
 
       <div class="filters">
-        <label>Agent:</label>
-        <input type="text" placeholder="agent ID" .value=${this.filterAgentId}
+        <label>${t("tenantTraces.filterAgent")}</label>
+        <input type="text" .placeholder=${t("tenantTraces.filterAgentPlaceholder")} .value=${this.filterAgentId}
           @change=${(e: Event) => { this.filterAgentId = (e.target as HTMLInputElement).value; this.page = 0; this.loadTurns(); }} />
-        <label>开始:</label>
-        <input type="date" .value=${this.filterSince}
+        <label>${t("tenantTraces.filterSince")}</label>
+        <input type="date" lang=${this.currentLocaleTag} .value=${this.filterSince}
           @change=${(e: Event) => { this.filterSince = (e.target as HTMLInputElement).value; this.page = 0; this.loadTurns(); }} />
-        <label>结束:</label>
-        <input type="date" .value=${this.filterUntil}
+        <label>${t("tenantTraces.filterUntil")}</label>
+        <input type="date" lang=${this.currentLocaleTag} .value=${this.filterUntil}
           @change=${(e: Event) => { this.filterUntil = (e.target as HTMLInputElement).value; this.page = 0; this.loadTurns(); }} />
       </div>
 
       ${this.loading
-        ? html`<div class="loading">加载中...</div>`
+        ? html`<div class="loading">${t("tenantTraces.loading")}</div>`
         : this.turns.length === 0
-          ? html`<div class="empty">暂无交互记录。系统与大模型的每次交互都会自动记录在这里。</div>`
+          ? html`<div class="empty">${t("tenantTraces.empty")}</div>`
           : html`
               <div class="turn-list">
                 ${this.turns.map((turn) => this.renderTurnCard(turn))}
@@ -420,10 +437,10 @@ export class TenantTracesView extends LitElement {
               ${this.total > this.pageSize ? html`
                 <div class="pagination">
                   <button class="btn btn-sm btn-outline" ?disabled=${this.page === 0}
-                    @click=${() => { this.page--; this.expandedTurnId = null; this.loadTurns(); }}>上一页</button>
+                    @click=${() => { this.page--; this.expandedTurnId = null; this.loadTurns(); }}>${t("tenantTraces.prevPage")}</button>
                   <span>${this.page * this.pageSize + 1}-${Math.min((this.page + 1) * this.pageSize, this.total)} / ${this.total}</span>
                   <button class="btn btn-sm btn-outline" ?disabled=${(this.page + 1) * this.pageSize >= this.total}
-                    @click=${() => { this.page++; this.expandedTurnId = null; this.loadTurns(); }}>下一页</button>
+                    @click=${() => { this.page++; this.expandedTurnId = null; this.loadTurns(); }}>${t("tenantTraces.nextPage")}</button>
                 </div>
               ` : nothing}
             `}

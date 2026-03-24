@@ -154,8 +154,9 @@ export class TenantModelsView extends LitElement {
   @property({ type: String }) gatewayUrl = "";
   @state() private configs: TenantModelConfig[] = [];
   @state() private loading = false;
-  @state() private error = "";
-  @state() private success = "";
+  @state() private errorKey = "";
+  @state() private successKey = "";
+  private msgParams: Record<string, string> = {};
   private msgTimer?: ReturnType<typeof setTimeout>;
   @state() private showForm = false;
   @state() private saving = false;
@@ -175,18 +176,26 @@ export class TenantModelsView extends LitElement {
   @state() private subModelId = "";
   @state() private subModelName = "";
 
-  private showError(msg: string) {
-    this.error = msg;
-    this.success = "";
+  private showError(key: string, params?: Record<string, string>) {
+    this.errorKey = key;
+    this.successKey = "";
+    this.msgParams = params ?? {};
     if (this.msgTimer) clearTimeout(this.msgTimer);
-    this.msgTimer = setTimeout(() => (this.error = ""), 5000);
+    this.msgTimer = setTimeout(() => (this.errorKey = ""), 5000);
   }
 
-  private showSuccess(msg: string) {
-    this.success = msg;
-    this.error = "";
+  private showSuccess(key: string, params?: Record<string, string>) {
+    this.successKey = key;
+    this.errorKey = "";
+    this.msgParams = params ?? {};
     if (this.msgTimer) clearTimeout(this.msgTimer);
-    this.msgTimer = setTimeout(() => (this.success = ""), 5000);
+    this.msgTimer = setTimeout(() => (this.successKey = ""), 5000);
+  }
+
+  /** Translate key at render time; raw server messages pass through as-is. */
+  private tr(key: string): string {
+    const result = t(key, this.msgParams);
+    return result === key ? key : result;
   }
 
   connectedCallback() {
@@ -200,12 +209,12 @@ export class TenantModelsView extends LitElement {
 
   private async loadConfigs() {
     this.loading = true;
-    this.error = "";
+    this.errorKey = "";
     try {
       const result = await this.rpc("tenant.models.list") as { models: TenantModelConfig[] };
       this.configs = result.models;
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : t("models.loadFailed"));
+      this.showError(err instanceof Error ? err.message : "models.loadFailed");
     } finally {
       this.loading = false;
     }
@@ -267,9 +276,16 @@ export class TenantModelsView extends LitElement {
   }
 
   private addModel() {
-    if (!this.subModelId || !this.subModelName) return;
+    if (!this.subModelId) {
+      this.showError("models.modelIdRequired");
+      return;
+    }
+    if (!this.subModelName) {
+      this.showError("models.displayNameRequired");
+      return;
+    }
     if (this.formModels.some((m) => m.id === this.subModelId)) {
-      this.showError(t("models.duplicateModelId"));
+      this.showError("models.duplicateModelId");
       return;
     }
     this.formModels = [
@@ -294,13 +310,13 @@ export class TenantModelsView extends LitElement {
     e.preventDefault();
     if (!this.formProviderType || !this.formProviderName) return;
     if (this.formModels.length === 0) {
-      this.showError(t("models.needOneModel"));
+      this.showError("models.needOneModel");
       return;
     }
 
     this.saving = true;
-    this.error = "";
-    this.success = "";
+    this.errorKey = "";
+    this.successKey = "";
 
     try {
       if (this.editingId) {
@@ -313,7 +329,7 @@ export class TenantModelsView extends LitElement {
           ...(this.formApiKey ? { apiKey: this.formApiKey } : {}),
           models: this.formModels,
         });
-        this.showSuccess(t("models.configUpdated"));
+        this.showSuccess("models.configUpdated");
       } else {
         await this.rpc("tenant.models.create", {
           providerType: this.formProviderType,
@@ -324,12 +340,12 @@ export class TenantModelsView extends LitElement {
           ...(this.formApiKey ? { apiKey: this.formApiKey } : {}),
           models: this.formModels,
         });
-        this.showSuccess(t("models.configCreated"));
+        this.showSuccess("models.configCreated");
       }
       this.showForm = false;
       await this.loadConfigs();
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : t("models.saveFailed"));
+      this.showError(err instanceof Error ? err.message : "models.saveFailed");
     } finally {
       this.saving = false;
     }
@@ -337,13 +353,13 @@ export class TenantModelsView extends LitElement {
 
   private async handleDelete(config: TenantModelConfig) {
     if (!confirm(t("models.confirmDelete", { name: config.providerName }))) return;
-    this.error = "";
+    this.errorKey = "";
     try {
       await this.rpc("tenant.models.delete", { id: config.id });
-      this.showSuccess(t("models.configDeleted", { name: config.providerName }));
+      this.showSuccess("models.configDeleted", { name: config.providerName });
       await this.loadConfigs();
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : t("models.deleteFailed"));
+      this.showError(err instanceof Error ? err.message : "models.deleteFailed");
     }
   }
 
@@ -352,7 +368,7 @@ export class TenantModelsView extends LitElement {
       await this.rpc("tenant.models.update", { id: config.id, isActive: !config.isActive });
       await this.loadConfigs();
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : t("models.toggleFailed"));
+      this.showError(err instanceof Error ? err.message : "models.toggleFailed");
     }
   }
 
@@ -368,8 +384,8 @@ export class TenantModelsView extends LitElement {
         </div>
       </div>
 
-      ${this.error ? html`<div class="error-msg">${this.error}</div>` : nothing}
-      ${this.success ? html`<div class="success-msg">${this.success}</div>` : nothing}
+      ${this.errorKey ? html`<div class="error-msg">${this.tr(this.errorKey)}</div>` : nothing}
+      ${this.successKey ? html`<div class="success-msg">${this.tr(this.successKey)}</div>` : nothing}
 
       ${this.showForm ? this.renderForm() : nothing}
 
@@ -394,7 +410,7 @@ export class TenantModelsView extends LitElement {
             <div class="model-name">
               <span class="status-dot ${config.isActive ? "active" : "inactive"}"></span>
               ${config.providerName}
-              ${!config.isActive ? html`<span style="font-size:0.7rem;padding:0.1rem 0.4rem;border-radius:4px;background:#2d1215;color:#fca5a5;margin-left:0.4rem">禁用</span>` : nothing}
+              ${!config.isActive ? html`<span style="font-size:0.7rem;padding:0.1rem 0.4rem;border-radius:4px;background:#2d1215;color:#fca5a5;margin-left:0.4rem">${t("models.disable")}</span>` : nothing}
             </div>
             <div class="model-provider">${providerLabel} | ${config.apiProtocol}</div>
           </div>
@@ -452,7 +468,7 @@ export class TenantModelsView extends LitElement {
           <div class="form-row">
             <div class="form-field">
               <label>${t("models.baseUrl")}</label>
-              <input type="text" placeholder="https://api.openai.com/v1"
+              <input type="text" .placeholder=${t("models.baseUrlPlaceholder")}
                 .value=${this.formBaseUrl}
                 @input=${(e: InputEvent) => (this.formBaseUrl = (e.target as HTMLInputElement).value)} />
             </div>
@@ -480,7 +496,7 @@ export class TenantModelsView extends LitElement {
             ${this.formAuthMode === "api-key" || this.formAuthMode === "token" ? html`
               <div class="form-field">
                 <label>${t("models.apiKey")}${this.editingId ? t("models.apiKeyKeepHint") : ""}</label>
-                <input type="password" placeholder="sk-..."
+                <input type="password" .placeholder=${t("models.apiKeyPlaceholder")}
                   .value=${this.formApiKey}
                   @input=${(e: InputEvent) => (this.formApiKey = (e.target as HTMLInputElement).value)} />
               </div>
@@ -515,13 +531,13 @@ export class TenantModelsView extends LitElement {
               <div class="sub-model-row">
                 <div class="form-field">
                   <label>${t("models.modelId")}</label>
-                  <input type="text" required placeholder="gpt-4o"
+                  <input type="text" .placeholder=${t("models.modelIdPlaceholder")}
                     .value=${this.subModelId}
                     @input=${(e: InputEvent) => (this.subModelId = (e.target as HTMLInputElement).value)} />
                 </div>
                 <div class="form-field">
                   <label>${t("models.displayName")}</label>
-                  <input type="text" required placeholder="GPT-4o"
+                  <input type="text" .placeholder=${t("models.displayNamePlaceholder")}
                     .value=${this.subModelName}
                     @input=${(e: InputEvent) => (this.subModelName = (e.target as HTMLInputElement).value)} />
                 </div>

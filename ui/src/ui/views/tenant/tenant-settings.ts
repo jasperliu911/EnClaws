@@ -4,10 +4,13 @@
 
 import { html, css, LitElement, nothing } from "lit";
 import { customElement, state, property } from "lit/decorators.js";
+import { t, I18nController } from "../../../i18n/index.ts";
 import { tenantRpc } from "./rpc.ts";
 
 @customElement("tenant-settings-view")
 export class TenantSettingsView extends LitElement {
+  private i18nCtrl = new I18nController(this);
+
   static styles = css`
     :host {
       display: block;
@@ -53,7 +56,7 @@ export class TenantSettingsView extends LitElement {
     }
     .form-field .hint {
       font-size: 0.75rem;
-      color: var(--text-muted, #525252);
+      color: var(--text-hint, #8a8a8a);
       margin-top: 0.25rem;
     }
     .btn {
@@ -95,8 +98,9 @@ export class TenantSettingsView extends LitElement {
   @property({ type: String }) gatewayUrl = "";
   @state() private loading = false;
   @state() private saving = false;
-  @state() private error = "";
-  @state() private success = "";
+  /** Stores i18n key or raw server message; translated at render time. */
+  @state() private errorKey = "";
+  @state() private successKey = "";
   private msgTimer?: ReturnType<typeof setTimeout>;
   @state() private name = "";
   @state() private slug = "";
@@ -104,6 +108,7 @@ export class TenantSettingsView extends LitElement {
   @state() private memoryContent = "";
   @state() private memorySaving = false;
   @state() private memorySuccess = "";
+  @state() private slugFocused = false;
 
   connectedCallback() {
     super.connectedCallback();
@@ -114,23 +119,30 @@ export class TenantSettingsView extends LitElement {
     return tenantRpc(method, params, this.gatewayUrl);
   }
 
-  private showError(msg: string) {
-    this.error = msg;
-    this.success = "";
+  private showError(key: string) {
+    this.errorKey = key;
+    this.successKey = "";
     if (this.msgTimer) clearTimeout(this.msgTimer);
-    this.msgTimer = setTimeout(() => (this.error = ""), 5000);
+    this.msgTimer = setTimeout(() => (this.errorKey = ""), 5000);
   }
 
-  private showSuccess(msg: string) {
-    this.success = msg;
-    this.error = "";
+  private showSuccess(key: string) {
+    this.successKey = key;
+    this.errorKey = "";
     if (this.msgTimer) clearTimeout(this.msgTimer);
-    this.msgTimer = setTimeout(() => (this.success = ""), 5000);
+    this.msgTimer = setTimeout(() => (this.successKey = ""), 5000);
+  }
+
+  /** Translate key at render time; map known server errors, otherwise return as-is. */
+  private tr(key: string): string {
+    if (key.includes("小写字母数字") || key.includes("lowercase")) return t("login.tenantSlugHint");
+    const result = t(key);
+    return result === key ? key : result;
   }
 
   private async loadSettings() {
     this.loading = true;
-    this.error = "";
+    this.errorKey = "";
     try {
       const result = await this.rpc("tenant.settings.get") as {
         name: string;
@@ -148,7 +160,7 @@ export class TenantSettingsView extends LitElement {
         // Memory may not be available yet
       }
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : "加载设置失败");
+      this.showError(err instanceof Error ? err.message : "tenantSettings.loadFailed");
     } finally {
       this.loading = false;
     }
@@ -157,25 +169,25 @@ export class TenantSettingsView extends LitElement {
   private async handleSave(e: Event) {
     e.preventDefault();
     if (!this.name.trim()) {
-      this.showError("企业名称不能为空");
+      this.showError("tenantSettings.nameRequired");
       return;
     }
     if (!this.slug.trim()) {
-      this.showError("企业标识不能为空");
+      this.showError("tenantSettings.slugRequired");
       return;
     }
     this.saving = true;
-    this.error = "";
-    this.success = "";
+    this.errorKey = "";
+    this.successKey = "";
     try {
       await this.rpc("tenant.settings.update", {
         name: this.name.trim(),
         slug: this.slug.trim(),
         identityPrompt: this.identityPrompt,
       });
-      this.showSuccess("设置已保存");
+      this.showSuccess("tenantSettings.saved");
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : "保存失败");
+      this.showError(err instanceof Error ? err.message : "tenantSettings.saveFailed");
     } finally {
       this.saving = false;
     }
@@ -183,13 +195,13 @@ export class TenantSettingsView extends LitElement {
 
   private async handleMemorySave() {
     this.memorySaving = true;
-    this.error = "";
+    this.errorKey = "";
     this.memorySuccess = "";
     try {
       await this.rpc("tenant.memory.update", { content: this.memoryContent });
-      this.showSuccess("企业记忆已保存");
+      this.showSuccess("tenantSettings.memorySaved");
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : "保存企业记忆失败");
+      this.showError(err instanceof Error ? err.message : "tenantSettings.memorySaveFailed");
     } finally {
       this.memorySaving = false;
     }
@@ -197,65 +209,68 @@ export class TenantSettingsView extends LitElement {
 
   render() {
     if (this.loading) {
-      return html`<div class="loading">加载中...</div>`;
+      return html`<div class="loading">${t("tenantSettings.loading")}</div>`;
     }
 
     return html`
-      <h2>企业设置</h2>
+      <h2>${t("tenantSettings.title")}</h2>
 
-      ${this.error ? html`<div class="error-msg">${this.error}</div>` : nothing}
-      ${this.success ? html`<div class="success-msg">${this.success}</div>` : nothing}
+      ${this.errorKey ? html`<div class="error-msg">${this.tr(this.errorKey)}</div>` : nothing}
+      ${this.successKey ? html`<div class="success-msg">${this.tr(this.successKey)}</div>` : nothing}
 
       <form @submit=${this.handleSave}>
         <div class="card">
           <div class="form-field">
-            <label>企业名称</label>
-            <input type="text" required
+            <label>${t("tenantSettings.name")}</label>
+            <input type="text"
+              placeholder=${t("tenantSettings.namePlaceholder")}
               .value=${this.name}
               @input=${(e: InputEvent) => (this.name = (e.target as HTMLInputElement).value)} />
           </div>
           <div class="form-field">
-            <label>企业标识 (slug)</label>
-            <input type="text" required pattern="[a-z0-9][a-z0-9_-]*[a-z0-9]"
+            <label>${t("tenantSettings.slug")}</label>
+            <input type="text"
+              placeholder=${t("tenantSettings.slugPlaceholder")}
               .value=${this.slug}
-              @input=${(e: InputEvent) => (this.slug = (e.target as HTMLInputElement).value)} />
-            <div class="hint">小写字母、数字、连字符和下划线</div>
+              @input=${(e: InputEvent) => (this.slug = (e.target as HTMLInputElement).value)}
+              @focus=${() => { this.slugFocused = true; }}
+              @blur=${() => { this.slugFocused = false; }} />
+            ${this.slugFocused ? html`<div class="hint">${t("login.tenantSlugHint")}</div>` : nothing}
           </div>
           <div class="form-field">
-            <label>企业身份描述</label>
+            <label>${t("tenantSettings.identityPrompt")}</label>
             <textarea
-              placeholder="描述企业的身份特征，例如：我们是XX科技有限公司，主营XX业务..."
+              placeholder=${t("tenantSettings.identityPromptPlaceholder")}
               .value=${this.identityPrompt}
               @input=${(e: InputEvent) => (this.identityPrompt = (e.target as HTMLTextAreaElement).value)}
             ></textarea>
-            <div class="hint">该内容将作为所有 AI 助手的企业上下文注入到系统提示中</div>
+            <div class="hint">${t("tenantSettings.identityPromptHint")}</div>
           </div>
         </div>
         <div class="actions">
           <button class="btn btn-primary" type="submit" ?disabled=${this.saving}>
-            ${this.saving ? "保存中..." : "保存设置"}
+            ${this.saving ? t("tenantSettings.saving") : t("tenantSettings.save")}
           </button>
         </div>
       </form>
 
       ${/* 企业记忆配置入口暂时隐藏，后端功能保留 */ false ? html`
-      <h2>企业记忆</h2>
+      <h2>${t("tenantSettings.memory")}</h2>
       ${this.memorySuccess ? html`<div class="success-msg">${this.memorySuccess}</div>` : nothing}
       <div class="card">
         <div class="form-field">
           <label>MEMORY.md</label>
           <textarea
             style="min-height: 200px; font-family: monospace; font-size: 0.8rem;"
-            placeholder="AI 助手会在对话中自动记录重要的企业信息到此处。&#10;你也可以手动编辑维护。&#10;&#10;格式示例：&#10;# Enterprise Memory&#10;&#10;- 公司主营业务为XX&#10;- 技术栈使用 React + Node.js&#10;- 合作方接口文档在 wiki.example.com"
             .value=${this.memoryContent}
             @input=${(e: InputEvent) => (this.memoryContent = (e.target as HTMLTextAreaElement).value)}
           ></textarea>
-          <div class="hint">该内容由 AI 助手自动维护，也可手动编辑。将作为企业上下文注入到所有 AI 对话中。</div>
+          <div class="hint">${t("tenantSettings.memoryHint")}</div>
         </div>
         <div class="actions">
           <button class="btn btn-primary" type="button" ?disabled=${this.memorySaving}
             @click=${this.handleMemorySave}>
-            ${this.memorySaving ? "保存中..." : "保存记忆"}
+            ${this.memorySaving ? t("tenantSettings.memorySaving") : t("tenantSettings.memorySave")}
           </button>
         </div>
       </div>

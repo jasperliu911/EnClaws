@@ -7,6 +7,7 @@
 
 import { html, css, LitElement, nothing } from "lit";
 import { customElement, state, property } from "lit/decorators.js";
+import { t, I18nController } from "../../../i18n/index.ts";
 import { tenantRpc } from "./rpc.ts";
 import { pathForTab, inferBasePathFromPathname } from "../../navigation.ts";
 import feishuScopes from "./feishu-scopes.json";
@@ -46,100 +47,101 @@ interface ToolGroup {
   tools: ToolDef[];
 }
 
-const BUILTIN_TOOL_GROUPS: ToolGroup[] = [
-  { id: "fs", label: "文件操作", tools: [
-    { id: "read", label: "read", description: "读取文件内容" },
-    { id: "write", label: "write", description: "创建或覆写文件" },
-    { id: "edit", label: "edit", description: "精确编辑文件" },
-    { id: "apply_patch", label: "apply_patch", description: "应用多文件补丁" },
-    { id: "grep", label: "grep", description: "搜索文件内容" },
-    { id: "find", label: "find", description: "按模式查找文件" },
-    { id: "ls", label: "ls", description: "列出目录内容" },
+/** Tool group/tool ID definitions — labels resolved at render time via i18n. */
+const TOOL_GROUP_DEFS = [
+  { id: "fs", labelKey: "tenantChannels.toolGroupFs", tools: [
+    { id: "read", label: "read", descKey: "tenantChannels.toolRead" },
+    { id: "write", label: "write", descKey: "tenantChannels.toolWrite" },
+    { id: "edit", label: "edit", descKey: "tenantChannels.toolEdit" },
+    { id: "apply_patch", label: "apply_patch", descKey: "tenantChannels.toolApplyPatch" },
+    { id: "grep", label: "grep", descKey: "tenantChannels.toolGrep" },
+    { id: "find", label: "find", descKey: "tenantChannels.toolFind" },
+    { id: "ls", label: "ls", descKey: "tenantChannels.toolLs" },
   ]},
-  { id: "runtime", label: "运行时", tools: [
-    { id: "exec", label: "exec", description: "执行 Shell 命令" },
-    { id: "process", label: "process", description: "管理后台进程" },
+  { id: "runtime", labelKey: "tenantChannels.toolGroupRuntime", tools: [
+    { id: "exec", label: "exec", descKey: "tenantChannels.toolExec" },
+    { id: "process", label: "process", descKey: "tenantChannels.toolProcess" },
   ]},
-  { id: "web", label: "网络", tools: [
-    { id: "web_search", label: "web_search", description: "搜索网页" },
-    { id: "web_fetch", label: "web_fetch", description: "获取网页内容" },
+  { id: "web", labelKey: "tenantChannels.toolGroupWeb", tools: [
+    { id: "web_search", label: "web_search", descKey: "tenantChannels.toolWebSearch" },
+    { id: "web_fetch", label: "web_fetch", descKey: "tenantChannels.toolWebFetch" },
   ]},
-  { id: "memory", label: "记忆", tools: [
-    { id: "memory_search", label: "memory_search", description: "语义搜索记忆" },
-    { id: "memory_get", label: "memory_get", description: "读取记忆文件" },
+  { id: "memory", labelKey: "tenantChannels.toolGroupMemory", tools: [
+    { id: "memory_search", label: "memory_search", descKey: "tenantChannels.toolMemorySearch" },
+    { id: "memory_get", label: "memory_get", descKey: "tenantChannels.toolMemoryGet" },
   ]},
-  { id: "sessions", label: "会话", tools: [
-    { id: "sessions_list", label: "sessions_list", description: "列出会话" },
-    { id: "sessions_history", label: "sessions_history", description: "查看会话历史" },
-    { id: "sessions_send", label: "sessions_send", description: "发送消息到会话" },
-    { id: "sessions_spawn", label: "sessions_spawn", description: "创建子代理" },
-    { id: "subagents", label: "subagents", description: "管理子代理" },
-    { id: "session_status", label: "session_status", description: "查看会话状态" },
+  { id: "sessions", labelKey: "tenantChannels.toolGroupSessions", tools: [
+    { id: "sessions_list", label: "sessions_list", descKey: "tenantChannels.toolSessionsList" },
+    { id: "sessions_history", label: "sessions_history", descKey: "tenantChannels.toolSessionsHistory" },
+    { id: "sessions_send", label: "sessions_send", descKey: "tenantChannels.toolSessionsSend" },
+    { id: "sessions_spawn", label: "sessions_spawn", descKey: "tenantChannels.toolSessionsSpawn" },
+    { id: "subagents", label: "subagents", descKey: "tenantChannels.toolSubagents" },
+    { id: "session_status", label: "session_status", descKey: "tenantChannels.toolSessionStatus" },
   ]},
-  { id: "messaging", label: "消息", tools: [
-    { id: "message", label: "message", description: "发送消息和频道操作" },
+  { id: "messaging", labelKey: "tenantChannels.toolGroupMessaging", tools: [
+    { id: "message", label: "message", descKey: "tenantChannels.toolMessage" },
   ]},
-  { id: "automation", label: "自动化", tools: [
-    { id: "cron", label: "cron", description: "定时任务调度" },
-    { id: "gateway", label: "gateway", description: "网关控制" },
+  { id: "automation", labelKey: "tenantChannels.toolGroupAutomation", tools: [
+    { id: "cron", label: "cron", descKey: "tenantChannels.toolCron" },
+    { id: "gateway", label: "gateway", descKey: "tenantChannels.toolGateway" },
   ]},
-  { id: "ui", label: "界面", tools: [
-    { id: "browser", label: "browser", description: "控制浏览器" },
-    { id: "canvas", label: "canvas", description: "控制画布" },
+  { id: "ui", labelKey: "tenantChannels.toolGroupUi", tools: [
+    { id: "browser", label: "browser", descKey: "tenantChannels.toolBrowser" },
+    { id: "canvas", label: "canvas", descKey: "tenantChannels.toolCanvas" },
   ]},
-  { id: "other", label: "其他", tools: [
-    { id: "nodes", label: "nodes", description: "节点和设备" },
-    { id: "agents_list", label: "agents_list", description: "列出代理" },
-    { id: "image", label: "image", description: "图片理解" },
-    { id: "tts", label: "tts", description: "文本转语音" },
+  { id: "other", labelKey: "tenantChannels.toolGroupOther", tools: [
+    { id: "nodes", label: "nodes", descKey: "tenantChannels.toolNodes" },
+    { id: "agents_list", label: "agents_list", descKey: "tenantChannels.toolAgentsList" },
+    { id: "image", label: "image", descKey: "tenantChannels.toolImage" },
+    { id: "tts", label: "tts", descKey: "tenantChannels.toolTts" },
   ]},
-  { id: "feishu-docs", label: "飞书 · 文档", tools: [
-    { id: "feishu_create_doc", label: "feishu_create_doc", description: "创建文档" },
-    { id: "feishu_fetch_doc", label: "feishu_fetch_doc", description: "读取文档内容" },
-    { id: "feishu_update_doc", label: "feishu_update_doc", description: "更新文档内容" },
-    { id: "feishu_doc_comments", label: "feishu_doc_comments", description: "文档评论" },
-    { id: "feishu_doc_media", label: "feishu_doc_media", description: "文档媒体（图片/文件）" },
-    { id: "feishu_search_doc_wiki", label: "feishu_search_doc_wiki", description: "搜索云文档和知识库" },
+  { id: "feishu-docs", labelKey: "tenantChannels.toolGroupFeishuDocs", tools: [
+    { id: "feishu_create_doc", label: "feishu_create_doc", descKey: "tenantChannels.toolFeishuCreateDoc" },
+    { id: "feishu_fetch_doc", label: "feishu_fetch_doc", descKey: "tenantChannels.toolFeishuFetchDoc" },
+    { id: "feishu_update_doc", label: "feishu_update_doc", descKey: "tenantChannels.toolFeishuUpdateDoc" },
+    { id: "feishu_doc_comments", label: "feishu_doc_comments", descKey: "tenantChannels.toolFeishuDocComments" },
+    { id: "feishu_doc_media", label: "feishu_doc_media", descKey: "tenantChannels.toolFeishuDocMedia" },
+    { id: "feishu_search_doc_wiki", label: "feishu_search_doc_wiki", descKey: "tenantChannels.toolFeishuSearchDocWiki" },
   ]},
-  { id: "feishu-wiki", label: "飞书 · 知识库", tools: [
-    { id: "feishu_wiki_space", label: "feishu_wiki_space", description: "知识库空间管理" },
-    { id: "feishu_wiki_space_node", label: "feishu_wiki_space_node", description: "知识库节点管理" },
+  { id: "feishu-wiki", labelKey: "tenantChannels.toolGroupFeishuWiki", tools: [
+    { id: "feishu_wiki_space", label: "feishu_wiki_space", descKey: "tenantChannels.toolFeishuWikiSpace" },
+    { id: "feishu_wiki_space_node", label: "feishu_wiki_space_node", descKey: "tenantChannels.toolFeishuWikiSpaceNode" },
   ]},
-  { id: "feishu-drive", label: "飞书 · 云盘", tools: [
-    { id: "feishu_drive_file", label: "feishu_drive_file", description: "云盘文件操作" },
-    { id: "feishu_sheet", label: "feishu_sheet", description: "多维电子表格" },
-    { id: "feishu_bitable_app", label: "feishu_bitable_app", description: "多维表格应用" },
-    { id: "feishu_bitable_app_table", label: "feishu_bitable_app_table", description: "多维表格数据表" },
-    { id: "feishu_bitable_app_table_record", label: "feishu_bitable_app_table_record", description: "多维表格记录" },
-    { id: "feishu_bitable_app_table_field", label: "feishu_bitable_app_table_field", description: "多维表格字段" },
-    { id: "feishu_bitable_app_table_view", label: "feishu_bitable_app_table_view", description: "多维表格视图" },
+  { id: "feishu-drive", labelKey: "tenantChannels.toolGroupFeishuDrive", tools: [
+    { id: "feishu_drive_file", label: "feishu_drive_file", descKey: "tenantChannels.toolFeishuDriveFile" },
+    { id: "feishu_sheet", label: "feishu_sheet", descKey: "tenantChannels.toolFeishuSheet" },
+    { id: "feishu_bitable_app", label: "feishu_bitable_app", descKey: "tenantChannels.toolFeishuBitableApp" },
+    { id: "feishu_bitable_app_table", label: "feishu_bitable_app_table", descKey: "tenantChannels.toolFeishuBitableAppTable" },
+    { id: "feishu_bitable_app_table_record", label: "feishu_bitable_app_table_record", descKey: "tenantChannels.toolFeishuBitableAppTableRecord" },
+    { id: "feishu_bitable_app_table_field", label: "feishu_bitable_app_table_field", descKey: "tenantChannels.toolFeishuBitableAppTableField" },
+    { id: "feishu_bitable_app_table_view", label: "feishu_bitable_app_table_view", descKey: "tenantChannels.toolFeishuBitableAppTableView" },
   ]},
-  { id: "feishu-calendar", label: "飞书 · 日历", tools: [
-    { id: "feishu_calendar_calendar", label: "feishu_calendar_calendar", description: "日历管理" },
-    { id: "feishu_calendar_event", label: "feishu_calendar_event", description: "日历事件（订/改/删会议）" },
-    { id: "feishu_calendar_event_attendee", label: "feishu_calendar_event_attendee", description: "会议参与者管理" },
-    { id: "feishu_calendar_freebusy", label: "feishu_calendar_freebusy", description: "查询忙闲状态" },
+  { id: "feishu-calendar", labelKey: "tenantChannels.toolGroupFeishuCalendar", tools: [
+    { id: "feishu_calendar_calendar", label: "feishu_calendar_calendar", descKey: "tenantChannels.toolFeishuCalendarCalendar" },
+    { id: "feishu_calendar_event", label: "feishu_calendar_event", descKey: "tenantChannels.toolFeishuCalendarEvent" },
+    { id: "feishu_calendar_event_attendee", label: "feishu_calendar_event_attendee", descKey: "tenantChannels.toolFeishuCalendarEventAttendee" },
+    { id: "feishu_calendar_freebusy", label: "feishu_calendar_freebusy", descKey: "tenantChannels.toolFeishuCalendarFreebusy" },
   ]},
-  { id: "feishu-task", label: "飞书 · 任务", tools: [
-    { id: "feishu_task_task", label: "feishu_task_task", description: "任务管理" },
-    { id: "feishu_task_tasklist", label: "feishu_task_tasklist", description: "任务清单" },
-    { id: "feishu_task_subtask", label: "feishu_task_subtask", description: "子任务" },
-    { id: "feishu_task_comment", label: "feishu_task_comment", description: "任务评论" },
+  { id: "feishu-task", labelKey: "tenantChannels.toolGroupFeishuTask", tools: [
+    { id: "feishu_task_task", label: "feishu_task_task", descKey: "tenantChannels.toolFeishuTaskTask" },
+    { id: "feishu_task_tasklist", label: "feishu_task_tasklist", descKey: "tenantChannels.toolFeishuTaskTasklist" },
+    { id: "feishu_task_subtask", label: "feishu_task_subtask", descKey: "tenantChannels.toolFeishuTaskSubtask" },
+    { id: "feishu_task_comment", label: "feishu_task_comment", descKey: "tenantChannels.toolFeishuTaskComment" },
   ]},
-  { id: "feishu-im", label: "飞书 · 消息", tools: [
-    { id: "feishu_im_user_message", label: "feishu_im_user_message", description: "发送/回复消息" },
-    { id: "feishu_im_user_get_messages", label: "feishu_im_user_get_messages", description: "获取消息记录" },
-    { id: "feishu_im_user_get_thread_messages", label: "feishu_im_user_get_thread_messages", description: "获取话题消息" },
-    { id: "feishu_im_user_search_messages", label: "feishu_im_user_search_messages", description: "搜索消息" },
-    { id: "feishu_im_user_fetch_resource", label: "feishu_im_user_fetch_resource", description: "获取消息资源" },
-    { id: "feishu_chat", label: "feishu_chat", description: "群聊管理" },
-    { id: "feishu_chat_members", label: "feishu_chat_members", description: "群成员管理" },
+  { id: "feishu-im", labelKey: "tenantChannels.toolGroupFeishuIm", tools: [
+    { id: "feishu_im_user_message", label: "feishu_im_user_message", descKey: "tenantChannels.toolFeishuImUserMessage" },
+    { id: "feishu_im_user_get_messages", label: "feishu_im_user_get_messages", descKey: "tenantChannels.toolFeishuImUserGetMessages" },
+    { id: "feishu_im_user_get_thread_messages", label: "feishu_im_user_get_thread_messages", descKey: "tenantChannels.toolFeishuImUserGetThreadMessages" },
+    { id: "feishu_im_user_search_messages", label: "feishu_im_user_search_messages", descKey: "tenantChannels.toolFeishuImUserSearchMessages" },
+    { id: "feishu_im_user_fetch_resource", label: "feishu_im_user_fetch_resource", descKey: "tenantChannels.toolFeishuImUserFetchResource" },
+    { id: "feishu_chat", label: "feishu_chat", descKey: "tenantChannels.toolFeishuChat" },
+    { id: "feishu_chat_members", label: "feishu_chat_members", descKey: "tenantChannels.toolFeishuChatMembers" },
   ]},
-  { id: "feishu-user", label: "飞书 · 通讯录", tools: [
-    { id: "feishu_get_user", label: "feishu_get_user", description: "获取用户信息" },
-    { id: "feishu_search_user", label: "feishu_search_user", description: "搜索用户" },
+  { id: "feishu-user", labelKey: "tenantChannels.toolGroupFeishuUser", tools: [
+    { id: "feishu_get_user", label: "feishu_get_user", descKey: "tenantChannels.toolFeishuGetUser" },
+    { id: "feishu_search_user", label: "feishu_search_user", descKey: "tenantChannels.toolFeishuSearchUser" },
   ]},
-];
+] as const;
 
 interface ChannelApp {
   id?: string;
@@ -184,26 +186,13 @@ interface TenantChannel {
   createdAt: string;
 }
 
-const CHANNEL_TYPES = [
-  { value: "telegram", label: "Telegram" },
-  { value: "discord", label: "Discord" },
-  { value: "slack", label: "Slack" },
-  { value: "whatsapp", label: "WhatsApp" },
-  { value: "feishu", label: "飞书" },
-  { value: "dingtalk", label: "钉钉" },
-  { value: "wechat", label: "微信" },
-  { value: "wecom", label: "企业微信" },
-  { value: "web", label: "网页" },
-];
-
-const POLICY_OPTIONS: { value: ChannelPolicy; label: string }[] = [
-  { value: "open", label: "开放" },
-  { value: "allowlist", label: "白名单" },
-  { value: "disabled", label: "禁用" },
-];
+/** All tool IDs (flat) — used by toggleAllAppTools. Stable across locales. */
+const ALL_TOOL_IDS = TOOL_GROUP_DEFS.flatMap((g) => g.tools.map((t) => t.id));
 
 @customElement("tenant-channels-view")
 export class TenantChannelsView extends LitElement {
+  private i18nCtrl = new I18nController(this);
+
   static styles = css`
     :host {
       display: block; padding: 1.5rem; color: var(--text, #e5e5e5);
@@ -436,8 +425,10 @@ export class TenantChannelsView extends LitElement {
   @property({ type: String }) gatewayUrl = "";
   @state() private channels: TenantChannel[] = [];
   @state() private loading = false;
-  @state() private error = "";
-  @state() private success = "";
+  /** Stores i18n key or raw server message; translated at render time. */
+  @state() private errorKey = "";
+  @state() private successKey = "";
+  private msgParams: Record<string, string> = {};
   private msgTimer?: ReturnType<typeof setTimeout>;
   @state() private showForm = false;
   @state() private editingId: string | null = null;
@@ -463,18 +454,58 @@ export class TenantChannelsView extends LitElement {
     this.clearAllFeishuTimers();
   }
 
-  private showError(msg: string) {
-    this.error = msg;
-    this.success = "";
+  private showError(key: string, params?: Record<string, string>) {
+    this.errorKey = key;
+    this.successKey = "";
+    this.msgParams = params ?? {};
     if (this.msgTimer) clearTimeout(this.msgTimer);
-    this.msgTimer = setTimeout(() => (this.error = ""), 5000);
+    this.msgTimer = setTimeout(() => (this.errorKey = ""), 5000);
   }
 
-  private showSuccess(msg: string) {
-    this.success = msg;
-    this.error = "";
+  private showSuccess(key: string, params?: Record<string, string>) {
+    this.successKey = key;
+    this.errorKey = "";
+    this.msgParams = params ?? {};
     if (this.msgTimer) clearTimeout(this.msgTimer);
-    this.msgTimer = setTimeout(() => (this.success = ""), 5000);
+    this.msgTimer = setTimeout(() => (this.successKey = ""), 5000);
+  }
+
+  /** Translate key at render time; map known server errors, pass through others. */
+  private tr(key: string): string {
+    if (key.includes("频道名称已存在")) return t("tenantChannels.channelNameExists");
+    if (key.includes("已存在相同 App ID")) return t("tenantChannels.duplicateAppId");
+    const result = t(key, this.msgParams);
+    return result === key ? key : result;
+  }
+
+  private get channelTypes() {
+    return [
+      { value: "telegram", label: "Telegram" },
+      { value: "discord", label: "Discord" },
+      { value: "slack", label: "Slack" },
+      { value: "whatsapp", label: "WhatsApp" },
+      { value: "feishu", label: t("tenantChannels.channelFeishu") },
+      { value: "dingtalk", label: t("tenantChannels.channelDingtalk") },
+      { value: "wechat", label: t("tenantChannels.channelWechat") },
+      { value: "wecom", label: t("tenantChannels.channelWecom") },
+      { value: "web", label: t("tenantChannels.channelWeb") },
+    ];
+  }
+
+  private get policyOptions(): { value: ChannelPolicy; label: string }[] {
+    return [
+      { value: "open", label: t("tenantChannels.policyOpen") },
+      { value: "allowlist", label: t("tenantChannels.policyAllowlist") },
+      { value: "disabled", label: t("tenantChannels.policyDisabled") },
+    ];
+  }
+
+  private get toolGroups(): ToolGroup[] {
+    return TOOL_GROUP_DEFS.map((g) => ({
+      id: g.id,
+      label: t(g.labelKey),
+      tools: g.tools.map((td) => ({ id: td.id, label: td.label, description: t(td.descKey) })),
+    }));
   }
 
   private async copyScopes() {
@@ -527,12 +558,12 @@ export class TenantChannelsView extends LitElement {
 
   private async loadChannels() {
     this.loading = true;
-    this.error = "";
+    this.errorKey = "";
     try {
       const result = await this.rpc("tenant.channels.list") as { channels: TenantChannel[] };
       this.channels = result.channels ?? [];
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : "加载频道列表失败");
+      this.showError(err instanceof Error ? err.message : "tenantChannels.loadFailed");
     } finally {
       this.loading = false;
     }
@@ -631,7 +662,7 @@ export class TenantChannelsView extends LitElement {
       this.formApps = apps;
       this.startFeishuPoll(index, result.interval);
     } catch (err) {
-      this.showError(`飞书注册初始化失败: ${err instanceof Error ? err.message : String(err)}`);
+      this.showError(`${t("tenantChannels.feishuRegisterFailed")}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -673,14 +704,14 @@ export class TenantChannelsView extends LitElement {
           a.feishuPollTimer = undefined;
           a.feishuMode = "manual"; // Switch to manual view to show filled fields
           this.formApps = apps;
-          this.showSuccess("飞书机器人创建成功，凭证已自动填入");
+          this.showSuccess("tenantChannels.feishuBotCreated");
         } else if (result.status === "error") {
           clearInterval(timer);
           const apps = [...this.formApps];
           apps[currentIndex].feishuPolling = false;
           apps[currentIndex].feishuPollTimer = undefined;
           this.formApps = apps;
-          this.showError(`飞书注册失败: ${result.errorDescription ?? result.error ?? "未知错误"}`);
+          this.showError(`${t("tenantChannels.feishuRegisterError")}: ${result.errorDescription ?? result.error ?? t("tenantChannels.feishuUnknownError")}`);
         }
         // "pending" → keep polling
       } catch {
@@ -708,24 +739,38 @@ export class TenantChannelsView extends LitElement {
 
   private async handleSave(e: Event) {
     e.preventDefault();
-    if (!this.formChannelName) return;
+    if (!this.formChannelName) {
+      this.showError("tenantChannels.channelNameRequired");
+      return;
+    }
+
+    if (this.formApps.length === 0) {
+      this.showError("tenantChannels.appRequired");
+      return;
+    }
 
     // Validate apps
+    const appIds = new Set<string>();
     for (const app of this.formApps) {
       if (!app.appId) {
-        this.showError("每个应用必须填写 App ID");
+        this.showError("tenantChannels.appIdRequired");
         return;
       }
+      if (appIds.has(app.appId)) {
+        this.showError("tenantChannels.appIdDuplicate");
+        return;
+      }
+      appIds.add(app.appId);
       if (!app.formAgentModelConfig || app.formAgentModelConfig.length === 0) {
         const name = app.botName || app.appId;
-        this.showError(`应用「${name}」必须至少选择一个模型`);
+        this.showError("tenantChannels.modelRequired", { name });
         return;
       }
     }
 
     this.saving = true;
-    this.error = "";
-    this.success = "";
+    this.errorKey = "";
+    this.successKey = "";
 
     try {
       if (this.editingId) {
@@ -773,7 +818,7 @@ export class TenantChannelsView extends LitElement {
           }
         }
 
-        this.showSuccess("频道及关联代理已更新");
+        this.showSuccess("tenantChannels.channelUpdated");
       } else {
         // Create channel with apps + per-app agent configs
         await this.rpc("tenant.channels.create", {
@@ -788,7 +833,7 @@ export class TenantChannelsView extends LitElement {
             agentConfig: this.buildAgentConfig(a) ?? undefined,
           })),
         });
-        this.showSuccess(`频道 ${this.formChannelName} 及关联代理已创建`);
+        this.showSuccess("tenantChannels.channelCreated", { name: this.formChannelName });
       }
       // Show auth guide for any new feishu app (scan or manual)
       const scannedAppId = this.formChannelType === "feishu"
@@ -801,7 +846,7 @@ export class TenantChannelsView extends LitElement {
         this.feishuAuthGuideAppId = scannedAppId;
       }
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : "保存失败");
+      this.showError(err instanceof Error ? err.message : "tenantChannels.saveFailed");
     } finally {
       this.saving = false;
     }
@@ -883,7 +928,7 @@ export class TenantChannelsView extends LitElement {
   }
 
   private toggleGroupTools(appIndex: number, groupId: string, enabled: boolean) {
-    const group = BUILTIN_TOOL_GROUPS.find((g) => g.id === groupId);
+    const group = TOOL_GROUP_DEFS.find((g) => g.id === groupId);
     if (!group) return;
     const apps = [...this.formApps];
     const deny = new Set(apps[appIndex].formAgentToolsDeny ?? []);
@@ -903,8 +948,7 @@ export class TenantChannelsView extends LitElement {
     if (enabled) {
       apps[appIndex] = { ...apps[appIndex], formAgentToolsDeny: [] };
     } else {
-      const allIds = BUILTIN_TOOL_GROUPS.flatMap((g) => g.tools.map((t) => t.id));
-      apps[appIndex] = { ...apps[appIndex], formAgentToolsDeny: allIds };
+      apps[appIndex] = { ...apps[appIndex], formAgentToolsDeny: [...ALL_TOOL_IDS] };
     }
     this.formApps = apps;
   }
@@ -916,14 +960,15 @@ export class TenantChannelsView extends LitElement {
   }
 
   private async handleDelete(channel: TenantChannel) {
-    if (!confirm(`确定要删除频道 ${channel.channelName ?? channel.channelType} 吗？`)) return;
-    this.error = "";
+    const name = channel.channelName ?? channel.channelType;
+    if (!confirm(t("tenantChannels.confirmDelete").replace("{name}", name))) return;
+    this.errorKey = "";
     try {
       await this.rpc("tenant.channels.delete", { channelId: channel.id });
-      this.showSuccess(`频道 ${channel.channelName ?? channel.channelType} 已删除`);
+      this.showSuccess("tenantChannels.channelDeleted", { name });
       await this.loadChannels();
     } catch (err) {
-      this.showError(err instanceof Error ? err.message : "删除失败");
+      this.showError(err instanceof Error ? err.message : "tenantChannels.deleteFailed");
     }
   }
 
@@ -935,22 +980,22 @@ export class TenantChannelsView extends LitElement {
     const noModels = this.availableModels.length === 0;
     return html`
       <div class="header">
-        <h2>频道管理</h2>
+        <h2>${t("tenantChannels.title")}</h2>
         <div style="display:flex;gap:0.5rem">
-          <button class="btn btn-outline" @click=${() => this.loadChannels()}>刷新</button>
+          <button class="btn btn-outline" @click=${() => this.loadChannels()}>${t("tenantChannels.refresh")}</button>
           <button class="btn btn-primary" ?disabled=${noModels && !this.showForm}
             @click=${() => { if (this.showForm) { this.clearAllFeishuTimers(); this.showForm = false; } else { this.startCreate(); } }}>
-            ${this.showForm ? "取消" : "创建频道"}
+            ${this.showForm ? t("tenantChannels.cancel") : t("tenantChannels.createChannel")}
           </button>
         </div>
       </div>
 
-      ${this.error ? html`<div class="error-msg">${this.error}</div>` : nothing}
-      ${this.success ? html`<div class="success-msg">${this.success}</div>` : nothing}
+      ${this.errorKey ? html`<div class="error-msg">${this.tr(this.errorKey)}</div>` : nothing}
+      ${this.successKey ? html`<div class="success-msg">${this.tr(this.successKey)}</div>` : nothing}
 
       ${this.showForm ? this.renderForm() : nothing}
 
-      ${this.loading ? html`<div class="loading">加载中...</div>` : this.channels.length === 0 ? html`<div class="empty">${noModels ? html`暂无可用模型，请在模型管理<a href=${this.modelManagePath} style="color:var(--accent,#3b82f6);text-decoration:underline;cursor:pointer">添加模型</a>` : html`暂无频道，点击"创建频道"添加`}</div>` : html`
+      ${this.loading ? html`<div class="loading">${t("tenantChannels.loading")}</div>` : this.channels.length === 0 ? html`<div class="empty">${noModels ? html`${t("tenantChannels.emptyNoModels").split(t("tenantChannels.addModelLink"))[0]}<a href=${this.modelManagePath} style="color:var(--accent,#3b82f6);text-decoration:underline;cursor:pointer">${t("tenantChannels.addModelLink")}</a>` : t("tenantChannels.empty")}</div>` : html`
         <div class="card-grid">
           ${this.channels.map((ch) => this.renderChannelCard(ch))}
         </div>
@@ -965,34 +1010,34 @@ export class TenantChannelsView extends LitElement {
     return html`
       <div class="modal-overlay" @click=${(e: Event) => { if (e.target === e.currentTarget) { this.feishuAuthGuideAppId = null; this.scopesCopied = false; } }}>
         <div class="modal-card">
-          <h3>&#x2705; 机器人创建成功</h3>
+          <h3>&#x2705; ${t("tenantChannels.feishuAuthTitle")}</h3>
           <p style="font-size:0.84rem;color:var(--text-secondary,#a3a3a3);margin:0 0 0.5rem">
-            机器人凭证已自动填入表单。为了让机器人正常使用全部功能，还需要在飞书开放平台完成权限授权。
+            ${t("tenantChannels.feishuAuthDesc")}
           </p>
           <ol class="modal-steps">
-            <li>点击下方链接，前往飞书开放平台的权限管理页面</li>
-            <li>在页面中开通所需的 <strong>应用权限</strong> 和 <strong>用户权限</strong></li>
-            <li>完成后点击"发布版本"使权限生效</li>
+            <li>${t("tenantChannels.feishuAuthStep1")}</li>
+            <li>${t("tenantChannels.feishuAuthStep2")}</li>
+            <li>${t("tenantChannels.feishuAuthStep3")}</li>
           </ol>
           <a class="modal-link" href=${authUrl} target="_blank" rel="noopener noreferrer">
             &#x1F517; ${authUrl}
           </a>
           <div class="modal-scopes-label">
-            <span>所需权限列表</span>
+            <span>${t("tenantChannels.feishuScopesList")}</span>
             <button type="button" class="btn-copy ${this.scopesCopied ? "copied" : ""}"
               @click=${() => this.copyScopes()}>
-              ${this.scopesCopied ? "\u2714 已复制" : "\uD83D\uDCCB 复制权限"}
+              ${this.scopesCopied ? `\u2714 ${t("tenantChannels.feishuCopied")}` : `\uD83D\uDCCB ${t("tenantChannels.feishuCopyScopes")}`}
             </button>
           </div>
           <textarea class="modal-scopes-box" readonly
             .value=${JSON.stringify(feishuScopes, null, 2)}></textarea>
           <p style="font-size:0.75rem;color:var(--text-muted,#525252);margin:0.5rem 0 0">
-            提示：复制权限后，在飞书开放平台的权限管理页面中批量导入、导出权限开通。如果暂时跳过，后续可随时配置。
+            ${t("tenantChannels.feishuScopesHint")}
           </p>
           <div class="modal-footer">
             <a class="btn btn-primary" href=${authUrl} target="_blank" rel="noopener noreferrer"
-              style="text-decoration:none;text-align:center">前往授权</a>
-            <button class="btn btn-outline" @click=${() => { this.feishuAuthGuideAppId = null; this.scopesCopied = false; }}>稍后再说</button>
+              style="text-decoration:none;text-align:center">${t("tenantChannels.feishuGoAuth")}</a>
+            <button class="btn btn-outline" @click=${() => { this.feishuAuthGuideAppId = null; this.scopesCopied = false; }}>${t("tenantChannels.feishuLater")}</button>
           </div>
         </div>
       </div>
@@ -1000,8 +1045,8 @@ export class TenantChannelsView extends LitElement {
   }
 
   private renderChannelCard(ch: TenantChannel) {
-    const typeName = CHANNEL_TYPES.find((t) => t.value === ch.channelType)?.label ?? ch.channelType;
-    const policyLabel = POLICY_OPTIONS.find((p) => p.value === ch.channelPolicy)?.label ?? ch.channelPolicy;
+    const typeName = this.channelTypes.find((ct) => ct.value === ch.channelType)?.label ?? ch.channelType;
+    const policyLabel = this.policyOptions.find((p) => p.value === ch.channelPolicy)?.label ?? ch.channelPolicy;
     return html`
       <div class="channel-card">
         <div class="channel-header">
@@ -1016,21 +1061,21 @@ export class TenantChannelsView extends LitElement {
         </div>
         ${ch.apps && ch.apps.length > 0 ? html`
           <div class="apps-section">
-            <div class="apps-section-title">应用 & 代理 (${ch.apps.length})</div>
+            <div class="apps-section-title">${t("tenantChannels.appsAndAgents")} (${ch.apps.length})</div>
             ${ch.apps.map((app) => html`
               <div class="app-item">
                 <div class="app-item-row">
                   <div class="app-item-info">
                     <span>${app.botName || app.appId}</span>
                     <span class="policy-badge ${app.groupPolicy}" style="font-size:0.65rem">
-                      ${POLICY_OPTIONS.find((p) => p.value === app.groupPolicy)?.label ?? app.groupPolicy}
+                      ${this.policyOptions.find((p) => p.value === app.groupPolicy)?.label ?? app.groupPolicy}
                     </span>
                   </div>
                   <span style="font-size:0.7rem;color:var(--text-muted,#525252)">${app.appId}</span>
                 </div>
                 ${app.agent ? html`
                   <div class="agent-info">
-                    <span class="agent-tag">代理</span>
+                    <span class="agent-tag">${t("tenantChannels.agent")}</span>
                     ${(app.agent.config?.displayName as string) || app.agent.name || app.agent.agentId}
                     <span style="color:var(--text-muted,#525252);margin-left:0.3rem">(${app.agent.agentId})</span>
                   </div>
@@ -1040,8 +1085,8 @@ export class TenantChannelsView extends LitElement {
           </div>
         ` : nothing}
         <div class="channel-actions">
-          <button class="btn btn-outline btn-sm" @click=${() => this.startEdit(ch)}>编辑</button>
-          <button class="btn btn-danger btn-sm" @click=${() => this.handleDelete(ch)}>删除</button>
+          <button class="btn btn-outline btn-sm" @click=${() => this.startEdit(ch)}>${t("tenantChannels.edit")}</button>
+          <button class="btn btn-danger btn-sm" @click=${() => this.handleDelete(ch)}>${t("tenantChannels.delete")}</button>
         </div>
       </div>
     `;
@@ -1050,44 +1095,44 @@ export class TenantChannelsView extends LitElement {
   private renderForm() {
     return html`
       <div class="form-card">
-        <h3>${this.editingId ? "编辑频道" : "创建频道"}</h3>
+        <h3>${this.editingId ? t("tenantChannels.editChannel") : t("tenantChannels.createChannel")}</h3>
         <form @submit=${this.handleSave}>
           <div class="form-row">
             <div class="form-field">
-              <label>频道类型</label>
+              <label>${t("tenantChannels.channelType")}</label>
               <select ?disabled=${!!this.editingId}
                 @change=${(e: Event) => (this.formChannelType = (e.target as HTMLSelectElement).value)}>
-                ${CHANNEL_TYPES.map((ct) => html`<option value=${ct.value} ?selected=${ct.value === this.formChannelType}>${ct.label}</option>`)}
+                ${this.channelTypes.map((ct) => html`<option value=${ct.value} ?selected=${ct.value === this.formChannelType}>${ct.label}</option>`)}
               </select>
             </div>
             <div class="form-field">
-              <label>频道名称</label>
-              <input type="text" required placeholder="输入频道名称"
+              <label>${t("tenantChannels.channelName")}</label>
+              <input type="text" .placeholder=${t("tenantChannels.channelNamePlaceholder")}
                 .value=${this.formChannelName}
                 @input=${(e: InputEvent) => (this.formChannelName = (e.target as HTMLInputElement).value)} />
             </div>
             <div class="form-field">
-              <label>频道策略</label>
+              <label>${t("tenantChannels.channelPolicy")}</label>
               <select
                 @change=${(e: Event) => (this.formChannelPolicy = (e.target as HTMLSelectElement).value as ChannelPolicy)}>
-                ${POLICY_OPTIONS.map((p) => html`<option value=${p.value} ?selected=${p.value === this.formChannelPolicy}>${p.label}</option>`)}
+                ${this.policyOptions.map((p) => html`<option value=${p.value} ?selected=${p.value === this.formChannelPolicy}>${p.label}</option>`)}
               </select>
             </div>
           </div>
 
-          <div class="divider"><span>应用 & 代理配置</span></div>
+          <div class="divider"><span>${t("tenantChannels.appAgentConfig")}</span></div>
 
           ${this.formApps.map((app, i) => this.renderAppFormCard(app, i))}
 
           <button type="button" class="btn btn-outline btn-sm" style="margin-bottom:1rem" @click=${() => this.addApp()}>
-            + 添加应用
+            ${t("tenantChannels.addApp")}
           </button>
 
           <div style="display:flex;gap:0.5rem">
             <button class="btn btn-primary" type="submit" ?disabled=${this.saving}>
-              ${this.saving ? "保存中..." : "保存"}
+              ${this.saving ? t("tenantChannels.saving") : t("tenantChannels.save")}
             </button>
-            <button class="btn btn-outline" type="button" @click=${() => { this.clearAllFeishuTimers(); this.showForm = false; }}>取消</button>
+            <button class="btn btn-outline" type="button" @click=${() => { this.clearAllFeishuTimers(); this.showForm = false; }}>${t("tenantChannels.cancel")}</button>
           </div>
         </form>
       </div>
@@ -1099,31 +1144,31 @@ export class TenantChannelsView extends LitElement {
     return html`
       <div class="app-form-card">
         <div class="app-form-header">
-          <span>应用 ${i + 1}</span>
-          <button type="button" class="remove-app" @click=${() => this.removeApp(i)}>移除</button>
+          <span>${t("tenantChannels.appLabel").replace("{index}", String(i + 1))}</span>
+          <button type="button" class="remove-app" @click=${() => this.removeApp(i)}>${t("tenantChannels.removeApp")}</button>
         </div>
 
         <!-- Feishu mode selector (only for feishu channel without existing app) -->
         ${this.formChannelType === "feishu" && !app.id ? html`
           <div class="feishu-mode-bar">
             <button type="button" class="feishu-mode-btn ${app.feishuMode === "scan" ? "active" : ""}"
-              @click=${() => this.setFeishuMode(i, "scan")}>&#x1F4F1; 扫码创建机器人</button>
+              @click=${() => this.setFeishuMode(i, "scan")}>&#x1F4F1; ${t("tenantChannels.feishuScanCreate")}</button>
             <button type="button" class="feishu-mode-btn ${(app.feishuMode ?? "manual") === "manual" ? "active" : ""}"
-              @click=${() => this.setFeishuMode(i, "manual")}>&#x2328;&#xFE0F; 绑定机器人</button>
+              @click=${() => this.setFeishuMode(i, "manual")}>&#x2328;&#xFE0F; ${t("tenantChannels.feishuManualBind")}</button>
           </div>
           ${app.feishuMode === "scan" ? html`
             ${app.feishuVerificationUrl ? html`
               <div class="qr-container">
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(app.feishuVerificationUrl)}" alt="QR Code" />
               </div>
-              <div class="qr-hint">请使用飞书 App 扫描上方二维码</div>
+              <div class="qr-hint">${t("tenantChannels.feishuScanHint")}</div>
               ${app.feishuPolling ? html`
                 <div class="qr-polling">
-                  <span class="dot">&#x25CF;</span> 等待扫码确认中...
+                  <span class="dot">&#x25CF;</span> ${t("tenantChannels.feishuPolling")}
                 </div>
               ` : nothing}
             ` : html`
-              <div class="qr-hint">正在初始化...</div>
+              <div class="qr-hint">${t("tenantChannels.feishuInitializing")}</div>
             `}
           ` : nothing}
         ` : nothing}
@@ -1132,15 +1177,15 @@ export class TenantChannelsView extends LitElement {
         ${this.formChannelType !== "feishu" || app.feishuMode !== "scan" || app.id ? html`
         <div class="form-row">
           <div class="form-field">
-            <label>App ID</label>
-            <input type="text" required placeholder="应用ID"
+            <label>${t("tenantChannels.appId")}</label>
+            <input type="text" .placeholder=${t("tenantChannels.appIdPlaceholder")}
               .value=${app.appId}
               @input=${(e: InputEvent) => this.updateApp(i, "appId", (e.target as HTMLInputElement).value)} />
           </div>
           <div class="form-field">
-            <label>App Secret</label>
+            <label>${t("tenantChannels.appSecret")}</label>
             <div class="secret-wrap">
-              <input type="password" placeholder="应用密钥"
+              <input type="password" .placeholder=${t("tenantChannels.appSecretPlaceholder")}
                 .value=${app.appSecret}
                 @input=${(e: InputEvent) => this.updateApp(i, "appSecret", (e.target as HTMLInputElement).value)} />
               <button type="button" class="eye-btn"
@@ -1154,34 +1199,34 @@ export class TenantChannelsView extends LitElement {
         ` : nothing}
         <div class="form-row">
           <div class="form-field">
-            <label>Bot 名称</label>
-            <input type="text" placeholder="机器人名称"
+            <label>${t("tenantChannels.botName")}</label>
+            <input type="text" .placeholder=${t("tenantChannels.botNamePlaceholder")}
               .value=${app.botName}
               @input=${(e: InputEvent) => this.updateApp(i, "botName", (e.target as HTMLInputElement).value)} />
           </div>
           <div class="form-field">
-            <label>群组策略</label>
+            <label>${t("tenantChannels.groupPolicy")}</label>
             <select
               @change=${(e: Event) => this.updateApp(i, "groupPolicy", (e.target as HTMLSelectElement).value)}>
-              ${POLICY_OPTIONS.map((p) => html`<option value=${p.value} ?selected=${p.value === app.groupPolicy}>${p.label}</option>`)}
+              ${this.policyOptions.map((p) => html`<option value=${p.value} ?selected=${p.value === app.groupPolicy}>${p.label}</option>`)}
             </select>
           </div>
         </div>
 
         <!-- Agent config fields (embedded in each app) -->
-        <div class="agent-section-label">代理配置</div>
+        <div class="agent-section-label">${t("tenantChannels.agentConfig")}</div>
         <div class="form-row">
           <div class="form-field">
-            <label>代理显示名称</label>
-            <input type="text" placeholder="我的代理"
+            <label>${t("tenantChannels.agentDisplayName")}</label>
+            <input type="text" .placeholder=${t("tenantChannels.agentDisplayNamePlaceholder")}
               .value=${app.formAgentDisplayName ?? ""}
               @input=${(e: InputEvent) => this.updateApp(i, "formAgentDisplayName", (e.target as HTMLInputElement).value)} />
           </div>
           <div class="form-field">
-            <label>代理 ID</label>
-            <input type="text" placeholder="my-agent" ?disabled=${hasExistingAgent}
+            <label>${t("tenantChannels.agentId")}</label>
+            <input type="text" .placeholder=${t("tenantChannels.agentIdPlaceholder")} ?disabled=${hasExistingAgent}
               pattern="^[a-z0-9]([a-z0-9_-]{0,62}[a-z0-9])?$"
-              title="仅限小写英文字母、数字、连字符和下划线，1-64位"
+              .title=${t("tenantChannels.agentIdPattern")}
               .value=${app.formAgentId ?? ""}
               @input=${(e: InputEvent) => {
                 this.updateApp(i, "formAgentId", (e.target as HTMLInputElement).value);
@@ -1190,23 +1235,23 @@ export class TenantChannelsView extends LitElement {
                 this.formApps = apps;
               }} />
             <div class="form-hint">
-              ${hasExistingAgent ? "代理 ID 创建后不可修改" : "仅限小写英文、数字、连字符和下划线，由 Bot 名称自动生成"}
+              ${hasExistingAgent ? t("tenantChannels.agentIdReadonly") : t("tenantChannels.agentIdHint")}
             </div>
           </div>
         </div>
         <div class="form-field" style="margin-bottom:0.5rem">
-          <label>模型绑定 <span style="color:var(--text-muted,#525252);font-weight:400">（可多选，设置默认，fallback 按顺序）</span></label>
+          <label>${t("tenantChannels.modelBinding")} <span style="color:var(--text-muted,#525252);font-weight:400">${t("tenantChannels.modelBindingHint")}</span></label>
           ${this.flatModels.length === 0 ? html`
-            <div class="form-hint" style="padding:0.3rem 0">暂无可用模型，请在模型管理<a href=${this.modelManagePath} style="color:var(--accent,#3b82f6);text-decoration:underline;cursor:pointer">添加模型</a></div>
+            <div class="form-hint" style="padding:0.3rem 0">${t("tenantChannels.noModelsAvailable").split(t("tenantChannels.addModelLink"))[0]}<a href=${this.modelManagePath} style="color:var(--accent,#3b82f6);text-decoration:underline;cursor:pointer">${t("tenantChannels.addModelLink")}</a></div>
           ` : html`
             <table class="model-select-table">
               <thead>
                 <tr>
                   <th style="width:2rem"></th>
-                  <th>模型ID</th>
-                  <th>模型名称</th>
-                  <th>供应商</th>
-                  <th style="width:4.5rem;text-align:center">默认</th>
+                  <th>${t("tenantChannels.modelId")}</th>
+                  <th>${t("tenantChannels.modelName")}</th>
+                  <th>${t("tenantChannels.provider")}</th>
+                  <th style="width:4.5rem;text-align:center">${t("tenantChannels.default")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1235,19 +1280,19 @@ export class TenantChannelsView extends LitElement {
             </table>
             ${(app.formAgentModelConfig ?? []).length > 0 ? html`
               <div class="form-hint">
-                已选 ${app.formAgentModelConfig!.length} 个，默认：${(() => {
+                ${t("tenantChannels.selectedCount").replace("{count}", String(app.formAgentModelConfig!.length)).replace("{default}", (() => {
                   const d = app.formAgentModelConfig!.find((e) => e.isDefault);
-                  if (!d) return "未设置";
+                  if (!d) return t("tenantChannels.notSet");
                   const fm = this.flatModels.find((m) => m.providerId === d.providerId && m.modelId === d.modelId);
-                  return fm ? `${fm.modelName}（${fm.providerName}）` : d.modelId;
-                })()}
+                  return fm ? `${fm.modelName} (${fm.providerName})` : d.modelId;
+                })())}
               </div>
             ` : nothing}
           `}
         </div>
         <div class="form-field" style="margin-bottom:0.25rem">
-          <label>系统提示词</label>
-          <textarea placeholder="你是一个有用的助手..."
+          <label>${t("tenantChannels.systemPrompt")}</label>
+          <textarea .placeholder=${t("tenantChannels.systemPromptPlaceholder")}
             .value=${app.formAgentSystemPrompt ?? ""}
             @input=${(e: InputEvent) => this.updateApp(i, "formAgentSystemPrompt", (e.target as HTMLTextAreaElement).value)}></textarea>
         </div>
@@ -1257,29 +1302,28 @@ export class TenantChannelsView extends LitElement {
           <div class="tools-header" @click=${() => this.toggleAppToolsExpanded(i)}>
             <div class="tools-header-left">
               <span class="tools-header-arrow ${app.formAgentToolsExpanded ? "open" : ""}">&#9654;</span>
-              <span>工具权限</span>
+              <span>${t("tenantChannels.toolAccess")}</span>
             </div>
             <span style="font-size:0.72rem;color:var(--text-muted,#525252)">
               ${(() => {
-                const allIds = BUILTIN_TOOL_GROUPS.flatMap((g) => g.tools.map((t) => t.id));
                 const denySet = new Set(app.formAgentToolsDeny ?? []);
-                const enabled = allIds.filter((id) => !denySet.has(id)).length;
-                return `${enabled}/${allIds.length} 已启用`;
+                const enabled = ALL_TOOL_IDS.filter((id) => !denySet.has(id)).length;
+                return t("tenantChannels.toolsEnabled").replace("{enabled}", String(enabled)).replace("{total}", String(ALL_TOOL_IDS.length));
               })()}
             </span>
           </div>
           ${app.formAgentToolsExpanded ? html`
             <div class="tools-body">
               <div class="form-hint" style="margin-bottom:0.4rem">
-                默认允许全部工具。取消勾选可禁止代理使用该工具（硬约束，代理将无法调用）。
+                ${t("tenantChannels.toolsHint")}
               </div>
               <div class="tools-actions">
-                <button type="button" class="btn btn-outline btn-sm" @click=${() => this.toggleAllAppTools(i, true)}>全部启用</button>
-                <button type="button" class="btn btn-outline btn-sm" @click=${() => this.toggleAllAppTools(i, false)}>全部禁用</button>
+                <button type="button" class="btn btn-outline btn-sm" @click=${() => this.toggleAllAppTools(i, true)}>${t("tenantChannels.enableAll")}</button>
+                <button type="button" class="btn btn-outline btn-sm" @click=${() => this.toggleAllAppTools(i, false)}>${t("tenantChannels.disableAll")}</button>
               </div>
-              ${BUILTIN_TOOL_GROUPS.map((group) => {
+              ${this.toolGroups.map((group) => {
                 const denySet = new Set(app.formAgentToolsDeny ?? []);
-                const enabledCount = group.tools.filter((t) => !denySet.has(t.id)).length;
+                const enabledCount = group.tools.filter((tl) => !denySet.has(tl.id)).length;
                 const allEnabled = enabledCount === group.tools.length;
                 const someEnabled = enabledCount > 0 && enabledCount < group.tools.length;
                 return html`
