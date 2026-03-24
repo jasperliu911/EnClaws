@@ -1525,8 +1525,21 @@ start_gateway_after_install() {
     ui_success "以后启动只需运行: enclaws-gateway"
     echo ""
 
-    # Auto-open browser after a short delay (background)
-    ( sleep 3 && open_browser "$gateway_url" ) &
+    # Wait for the gateway to be ready, then open browser (background)
+    (
+        local max_wait=60
+        local elapsed=0
+        while [[ $elapsed -lt $max_wait ]]; do
+            sleep 1
+            elapsed=$((elapsed + 1))
+            if curl -sf -o /dev/null "http://localhost:18789" 2>/dev/null || \
+               wget -q -O /dev/null "http://localhost:18789" 2>/dev/null; then
+                open_browser "$gateway_url"
+                exit 0
+            fi
+        done
+        ui_warn "Gateway did not respond within ${max_wait}s — open manually: ${gateway_url}"
+    ) &
 
     cd "$repo_dir"
     exec node --env-file=.env dist/index.js gateway --port 18789 --allow-unconfigured
