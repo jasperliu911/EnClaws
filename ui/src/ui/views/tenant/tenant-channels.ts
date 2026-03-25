@@ -143,6 +143,13 @@ const TOOL_GROUP_DEFS = [
   ]},
 ] as const;
 
+interface AppConnectionStatus {
+  connected: boolean;
+  lastConnectedAt: number | null;
+  lastDisconnectedAt: number | null;
+  lastError: string | null;
+}
+
 interface ChannelApp {
   id?: string;
   appId: string;
@@ -150,6 +157,7 @@ interface ChannelApp {
   botName: string;
   groupPolicy: ChannelPolicy;
   isActive?: boolean;
+  connectionStatus?: AppConnectionStatus | null;
   agent: ChannelAppAgent | null;
   // Form-only fields for agent config (not from server)
   formAgentId?: string;
@@ -1047,6 +1055,8 @@ export class TenantChannelsView extends LitElement {
   private renderChannelCard(ch: TenantChannel) {
     const typeName = this.channelTypes.find((ct) => ct.value === ch.channelType)?.label ?? ch.channelType;
     const policyLabel = this.policyOptions.find((p) => p.value === ch.channelPolicy)?.label ?? ch.channelPolicy;
+    const anyConnected = ch.apps?.some((a) => a.connectionStatus?.connected) ?? false;
+    const hasConnectionInfo = ch.apps?.some((a) => a.connectionStatus) ?? false;
     return html`
       <div class="channel-card">
         <div class="channel-header">
@@ -1059,6 +1069,15 @@ export class TenantChannelsView extends LitElement {
             <span class="policy-badge ${ch.channelPolicy}">${policyLabel}</span>
           </div>
         </div>
+        ${hasConnectionInfo ? html`
+          <div style="display:flex;align-items:center;gap:0.3rem;font-size:0.78rem;margin-bottom:0.5rem;">
+            <span style="color:var(--text-secondary,#a3a3a3)">${t("tenantChannels.connectionStatus")}:</span>
+            <span class="status-dot ${anyConnected ? "active" : "inactive"}"></span>
+            <span style="color:${anyConnected ? "#22c55e" : "var(--text-muted,#525252)"}">
+              ${anyConnected ? t("tenantChannels.online") : t("tenantChannels.offline")}
+            </span>
+          </div>
+        ` : nothing}
         ${ch.apps && ch.apps.length > 0 ? html`
           <div class="apps-section">
             <div class="apps-section-title">${t("tenantChannels.appsAndAgents")} (${ch.apps.length})</div>

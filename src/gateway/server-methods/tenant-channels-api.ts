@@ -69,7 +69,7 @@ function isValidPolicy(v: unknown): v is ChannelPolicy {
 }
 
 export const tenantChannelsHandlers: GatewayRequestHandlers = {
-  "tenant.channels.list": async ({ params, client, respond }: GatewayRequestHandlerOptions) => {
+  "tenant.channels.list": async ({ params, client, respond, context }: GatewayRequestHandlerOptions) => {
     const ctx = getTenantCtx(client, respond);
     if (!ctx) return;
 
@@ -85,6 +85,9 @@ export const tenantChannelsHandlers: GatewayRequestHandlers = {
 
     const { channelType } = params as { channelType?: string };
     const channels = await listTenantChannels(ctx.tenantId, { channelType });
+
+    // Grab runtime snapshot to resolve per-app connection status
+    const runtimeSnapshot = context.getRuntimeSnapshot();
 
     // Load apps and associated agents for each channel
     const allAgents = await listTenantAgents(ctx.tenantId, { activeOnly: false });
@@ -103,6 +106,9 @@ export const tenantChannelsHandlers: GatewayRequestHandlers = {
           apps: apps.map((a) => {
             // Find the agent linked to this specific app
             const linkedAgent = allAgents.find((ag) => ag.channelAppId === a.id);
+            // Resolve connection status from runtime snapshot
+            const accountSnapshot =
+              runtimeSnapshot.channelAccounts[ch.channelType as ChannelId]?.[a.appId];
             return {
               id: a.id,
               appId: a.appId,
@@ -110,6 +116,12 @@ export const tenantChannelsHandlers: GatewayRequestHandlers = {
               botName: a.botName,
               groupPolicy: a.groupPolicy,
               isActive: a.isActive,
+              connectionStatus: accountSnapshot ? {
+                connected: accountSnapshot.running === true,
+                lastConnectedAt: accountSnapshot.lastStartAt ?? null,
+                lastDisconnectedAt: accountSnapshot.lastStopAt ?? null,
+                lastError: accountSnapshot.lastError ?? null,
+              } : null,
               agent: linkedAgent ? {
                 agentId: linkedAgent.agentId,
                 name: linkedAgent.name,
