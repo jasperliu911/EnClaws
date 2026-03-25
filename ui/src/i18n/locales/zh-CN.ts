@@ -22,6 +22,8 @@ export const zh_CN: TranslationMap = {
     settings: "设置",
     expand: "展开侧边栏",
     collapse: "折叠侧边栏",
+    logout: "退出",
+    logoutTitle: "退出登录",
   },
   tabs: {
     agents: "代理",

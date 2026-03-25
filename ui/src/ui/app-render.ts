@@ -400,7 +400,7 @@ export function renderApp(state: AppViewState) {
                 ${state.settings.navCollapsed
                   ? html`<button
                       style="background: none; border: none; color: var(--text-muted, #a3a3a3); cursor: pointer; padding: 0.3rem; font-size: 0.75rem;"
-                      title="${authState.user.email} — 退出登录"
+                      title="${authState.user.email} — ${t("nav.logoutTitle")}"
                       @click=${() => { clearAuth(); window.location.reload(); }}
                     >⏻</button>`
                   : html`
@@ -409,9 +409,9 @@ export function renderApp(state: AppViewState) {
                     </span>
                     <button
                       style="background: none; border: none; color: var(--text-muted, #737373); cursor: pointer; padding: 0.2rem 0.4rem; font-size: 0.75rem; flex-shrink: 0;"
-                      title="退出登录"
+                      title=${t("nav.logoutTitle")}
                       @click=${() => { clearAuth(); window.location.reload(); }}
-                    >退出</button>
+                    >${t("nav.logout")}</button>
                   `}
               </div>
             </div>
@@ -1412,15 +1412,15 @@ export function renderApp(state: AppViewState) {
 
         ${
           state.tab === "tenant-settings" || state.tab === "tenant-users" || state.tab === "tenant-channels" || state.tab === "tenant-models" || state.tab === "tenant-skills" || state.tab === "tenant-traces" || state.tab === "tenant-usage"
-            ? html`
+            ? html`<section class="card">
                   ${state.tab === "tenant-settings" ? html`<tenant-settings-view .gatewayUrl=${state.settings.gatewayUrl}></tenant-settings-view>` : nothing}
                   ${state.tab === "tenant-users" ? html`<tenant-users-view .gatewayUrl=${state.settings.gatewayUrl}></tenant-users-view>` : nothing}
-${state.tab === "tenant-channels" ? html`<tenant-channels-view .gatewayUrl=${state.settings.gatewayUrl}></tenant-channels-view>` : nothing}
+                  ${state.tab === "tenant-channels" ? html`<tenant-channels-view .gatewayUrl=${state.settings.gatewayUrl}></tenant-channels-view>` : nothing}
                   ${state.tab === "tenant-models" ? html`<tenant-models-view .gatewayUrl=${state.settings.gatewayUrl}></tenant-models-view>` : nothing}
                   ${state.tab === "tenant-skills" ? html`<tenant-skills-view .gatewayUrl=${state.settings.gatewayUrl}></tenant-skills-view>` : nothing}
                   ${state.tab === "tenant-traces" ? html`<tenant-traces-view .gatewayUrl=${state.settings.gatewayUrl}></tenant-traces-view>` : nothing}
                   ${state.tab === "tenant-usage" ? html`<tenant-usage-view .gatewayUrl=${state.settings.gatewayUrl}></tenant-usage-view>` : nothing}
-                `
+                </section>`
             : nothing
         }
 

@@ -22,6 +22,8 @@ export const zh_TW: TranslationMap = {
     tenant: "企業管理",
     expand: "展開側邊欄",
     collapse: "折疊側邊欄",
+    logout: "登出",
+    logoutTitle: "登出",
   },
   tabs: {
     agents: "代理",

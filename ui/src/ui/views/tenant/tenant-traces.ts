@@ -136,12 +136,12 @@ export class TenantTracesView extends LitElement {
     .collapsible-toggle:hover { color: var(--text, #e5e5e5); border-color: var(--accent, #3b82f6); }
     .collapsible-toggle.active { color: var(--accent, #3b82f6); border-color: var(--accent, #3b82f6); }
     .code-block {
-      background: #0d0d0d; border: 1px solid var(--border, #262626);
+      background: var(--bg, #0d0d0d); border: 1px solid var(--border, #262626);
       border-radius: var(--radius-md, 6px); padding: 0.75rem;
       font-family: var(--font-mono, "SF Mono", "Consolas", monospace);
       font-size: 0.75rem; line-height: 1.5; overflow-x: auto;
       max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
-      margin-top: 0.35rem;
+      margin-top: 0.35rem; color: var(--text, #e5e5e5);
     }
     .stop-reason {
       display: inline-block; padding: 0.1rem 0.4rem; border-radius: 4px;

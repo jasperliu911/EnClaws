@@ -22,6 +22,8 @@ export const en: TranslationMap = {
     settings: "Settings",
     expand: "Expand sidebar",
     collapse: "Collapse sidebar",
+    logout: "Logout",
+    logoutTitle: "Sign out",
   },
   tabs: {
     agents: "Agents",

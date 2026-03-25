@@ -25,7 +25,7 @@ export class LanguageSwitcher extends LitElement {
     button {
       background: transparent;
       border: none;
-      color: var(--text-color);
+      color: var(--text-color, var(--text, #e5e5e5));
       display: flex;
       align-items: center;
       gap: 6px;
@@ -37,7 +37,7 @@ export class LanguageSwitcher extends LitElement {
     }
 
     button:hover {
-      background: var(--surface-2);
+      background: var(--surface-2, rgba(128, 128, 128, 0.15));
     }
 
     .icon {
@@ -58,10 +58,10 @@ export class LanguageSwitcher extends LitElement {
       top: 100%;
       right: 0;
       margin-top: 4px;
-      background: var(--surface-1);
-      border: 1px solid var(--border-color);
+      background: var(--surface-1, var(--card, #1f1f1f));
+      border: 1px solid var(--border-color, var(--border, #303030));
       border-radius: 6px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       min-width: 120px;
       z-index: 100;
       display: none;
@@ -80,19 +80,19 @@ export class LanguageSwitcher extends LitElement {
       padding: 8px 12px;
       cursor: pointer;
       font-size: 14px;
-      color: var(--text-color);
+      color: var(--text-color, var(--text, #e5e5e5));
       border-radius: 4px;
       width: 100%;
     }
 
     .menu-item:hover {
-      background: var(--surface-2);
+      background: var(--surface-2, rgba(128, 128, 128, 0.15));
     }
 
     .menu-item.active {
       font-weight: 600;
-      background: var(--surface-2);
-      color: var(--primary-color);
+      background: var(--surface-2, rgba(128, 128, 128, 0.15));
+      color: var(--primary-color, var(--accent, #3b82f6));
     }
   `;
 

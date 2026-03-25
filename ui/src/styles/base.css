@@ -6,6 +6,7 @@
   --bg-hover: #f0f0f0;
   --bg-muted: #f5f5f5;
   --bg-content: #f5f5f5;
+  --nav-active-bg: #e6f4ff;
 
   /* Card / Surface */
   --card: #ffffff;
@@ -119,6 +120,7 @@
   --bg-hover: #2a2a2a;
   --bg-muted: #1f1f1f;
   --bg-content: #141414;
+  --nav-active-bg: rgba(22, 119, 255, 0.15);
 
   --card: #1f1f1f;
   --card-foreground: #f5f5f5;

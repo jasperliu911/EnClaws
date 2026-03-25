@@ -22,6 +22,8 @@ export const pt_BR: TranslationMap = {
     tenant: "Inquilino",
     expand: "Expandir barra lateral",
     collapse: "Recolher barra lateral",
+    logout: "Sair",
+    logoutTitle: "Sair",
   },
   tabs: {
     agents: "Agentes",

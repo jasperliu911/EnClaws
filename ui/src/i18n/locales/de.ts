@@ -22,6 +22,8 @@ export const de: TranslationMap = {
     tenant: "Mandant",
     expand: "Seitenleiste ausklappen",
     collapse: "Seitenleiste einklappen",
+    logout: "Abmelden",
+    logoutTitle: "Abmelden",
   },
   tabs: {
     agents: "Agenten",
