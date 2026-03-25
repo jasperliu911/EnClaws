@@ -92,24 +92,6 @@ const entries: SubCliEntry[] = [
     },
   },
   {
-    name: "approvals",
-    description: "Manage exec approvals (gateway or node host)",
-    hasSubcommands: true,
-    register: async (program) => {
-      const mod = await import("../exec-approvals-cli.js");
-      mod.registerExecApprovalsCli(program);
-    },
-  },
-  {
-    name: "nodes",
-    description: "Manage gateway-owned node pairing and node commands",
-    hasSubcommands: true,
-    register: async (program) => {
-      const mod = await import("../nodes-cli.js");
-      mod.registerNodesCli(program);
-    },
-  },
-  {
     name: "devices",
     description: "Device pairing + token management",
     hasSubcommands: true,
@@ -119,48 +101,12 @@ const entries: SubCliEntry[] = [
     },
   },
   {
-    name: "node",
-    description: "Run and manage the headless node host service",
-    hasSubcommands: true,
-    register: async (program) => {
-      const mod = await import("../node-cli.js");
-      mod.registerNodeCli(program);
-    },
-  },
-  {
-    name: "tui",
-    description: "Open a terminal UI connected to the Gateway",
-    hasSubcommands: false,
-    register: async (program) => {
-      const mod = await import("../tui-cli.js");
-      mod.registerTuiCli(program);
-    },
-  },
-  {
     name: "cron",
     description: "Manage cron jobs via the Gateway scheduler",
     hasSubcommands: true,
     register: async (program) => {
       const mod = await import("../cron-cli.js");
       mod.registerCronCli(program);
-    },
-  },
-  {
-    name: "dns",
-    description: "DNS helpers for wide-area discovery (Tailscale + CoreDNS)",
-    hasSubcommands: true,
-    register: async (program) => {
-      const mod = await import("../dns-cli.js");
-      mod.registerDnsCli(program);
-    },
-  },
-  {
-    name: "docs",
-    description: "Search the live OpenClaw docs",
-    hasSubcommands: false,
-    register: async (program) => {
-      const mod = await import("../docs-cli.js");
-      mod.registerDocsCli(program);
     },
   },
   {
@@ -182,35 +128,12 @@ const entries: SubCliEntry[] = [
     },
   },
   {
-    name: "qr",
-    description: "Generate iOS pairing QR/setup code",
-    hasSubcommands: false,
-    register: async (program) => {
-      const mod = await import("../qr-cli.js");
-      mod.registerQrCli(program);
-    },
-  },
-  {
     name: "clawbot",
     description: "Legacy clawbot command aliases",
     hasSubcommands: true,
     register: async (program) => {
       const mod = await import("../clawbot-cli.js");
       mod.registerClawbotCli(program);
-    },
-  },
-  {
-    name: "pairing",
-    description: "Secure DM pairing (approve inbound requests)",
-    hasSubcommands: true,
-    register: async (program) => {
-      // Initialize plugins before registering pairing CLI.
-      // The pairing CLI calls listPairingChannels() at registration time,
-      // which requires the plugin registry to be populated with channel plugins.
-      const { registerPluginCliCommands } = await import("../../plugins/cli.js");
-      registerPluginCliCommands(program, await loadConfig());
-      const mod = await import("../pairing-cli.js");
-      mod.registerPairingCli(program);
     },
   },
   {
@@ -231,33 +154,6 @@ const entries: SubCliEntry[] = [
     register: async (program) => {
       const mod = await import("../channels-cli.js");
       mod.registerChannelsCli(program);
-    },
-  },
-  {
-    name: "directory",
-    description: "Lookup contact and group IDs (self, peers, groups) for supported chat channels",
-    hasSubcommands: true,
-    register: async (program) => {
-      const mod = await import("../directory-cli.js");
-      mod.registerDirectoryCli(program);
-    },
-  },
-  {
-    name: "security",
-    description: "Security tools and local config audits",
-    hasSubcommands: true,
-    register: async (program) => {
-      const mod = await import("../security-cli.js");
-      mod.registerSecurityCli(program);
-    },
-  },
-  {
-    name: "secrets",
-    description: "Secrets runtime reload controls",
-    hasSubcommands: true,
-    register: async (program) => {
-      const mod = await import("../secrets-cli.js");
-      mod.registerSecretsCli(program);
     },
   },
   {

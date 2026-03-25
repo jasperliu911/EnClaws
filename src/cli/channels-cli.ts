@@ -12,7 +12,6 @@ import { danger } from "../globals.js";
 import { defaultRuntime } from "../runtime.js";
 import { formatDocsLink } from "../terminal/links.js";
 import { theme } from "../terminal/theme.js";
-import { runChannelLogin, runChannelLogout } from "./channel-auth.js";
 import { formatCliChannelOptions } from "./channel-options.js";
 import { runCommandWithRuntime } from "./cli-utils.js";
 import { hasExplicitOptions } from "./command-options.js";
@@ -218,39 +217,4 @@ export function registerChannelsCli(program: Command) {
       });
     });
 
-  channels
-    .command("login")
-    .description("Link a channel account (if supported)")
-    .option("--channel <channel>", "Channel alias (auto when only one is configured)")
-    .option("--account <id>", "Account id (accountId)")
-    .option("--verbose", "Verbose connection logs", false)
-    .action(async (opts) => {
-      await runChannelsCommandWithDanger(async () => {
-        await runChannelLogin(
-          {
-            channel: opts.channel as string | undefined,
-            account: opts.account as string | undefined,
-            verbose: Boolean(opts.verbose),
-          },
-          defaultRuntime,
-        );
-      }, "Channel login failed");
-    });
-
-  channels
-    .command("logout")
-    .description("Log out of a channel session (if supported)")
-    .option("--channel <channel>", "Channel alias (auto when only one is configured)")
-    .option("--account <id>", "Account id (accountId)")
-    .action(async (opts) => {
-      await runChannelsCommandWithDanger(async () => {
-        await runChannelLogout(
-          {
-            channel: opts.channel as string | undefined,
-            account: opts.account as string | undefined,
-          },
-          defaultRuntime,
-        );
-      }, "Channel logout failed");
-    });
 }
