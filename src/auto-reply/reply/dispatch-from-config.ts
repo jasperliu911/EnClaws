@@ -25,6 +25,7 @@ import { shouldSuppressReasoningPayload } from "./reply-payloads.js";
 import { isRoutableChannel, routeReply } from "./route-reply.js";
 import { resolveRunTypingPolicy } from "./typing-policy.js";
 import { enrichTenantContext } from "./tenant-enrich.js";
+import { checkInputFilter } from "./input-filter.js";
 
 const AUDIO_PLACEHOLDER_RE = /^<media:audio>(\s*\([^)]*\))?$/i;
 const AUDIO_HEADER_RE = /^\[Audio\b/i;
@@ -362,6 +363,40 @@ export async function dispatchReplyFromConfig(params: {
   };
 
   markProcessing();
+
+  // ── Input content filter ────────────────────────────────────
+  const filterResult = checkInputFilter({
+    text: content,
+    channel: channelId,
+    chatType: ctx.ChatType?.toLowerCase(),
+  });
+  if (filterResult.blocked) {
+    const payload = { text: filterResult.replyText ?? "" } satisfies ReplyPayload;
+    let queuedFinal = false;
+    let routedFinalCount = 0;
+    if (shouldRouteToOriginating && originatingChannel && originatingTo) {
+      const result = await routeReply({
+        payload,
+        channel: originatingChannel,
+        to: originatingTo,
+        sessionKey: ctx.SessionKey,
+        accountId: ctx.AccountId,
+        threadId: ctx.MessageThreadId,
+        cfg,
+      });
+      queuedFinal = result.ok;
+      if (result.ok) {
+        routedFinalCount += 1;
+      }
+    } else {
+      queuedFinal = dispatcher.sendFinalReply(payload);
+    }
+    const counts = dispatcher.getQueuedCounts();
+    counts.final += routedFinalCount;
+    recordProcessed("completed", { reason: "input_filter_blocked" });
+    markIdle("message_completed");
+    return { queuedFinal, counts };
+  }
 
   try {
     const fastAbort = await tryFastAbortFromMessage({ ctx, cfg });
