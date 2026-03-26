@@ -1,4 +1,5 @@
 import type { OpenClawConfig, SkillConfig } from "../../config/config.js";
+import { createSubsystemLogger } from "../../logging/subsystem.js";
 import {
   evaluateRuntimeEligibility,
   hasBinary,
@@ -8,6 +9,8 @@ import {
 } from "../../shared/config-eval.js";
 import { resolveSkillKey } from "./frontmatter.js";
 import type { SkillEligibilityContext, SkillEntry } from "./types.js";
+
+const debugLog = createSubsystemLogger("skills/config");
 
 const DEFAULT_CONFIG_VALUES: Record<string, boolean> = {
   "browser.enabled": true,
@@ -78,12 +81,14 @@ export function shouldIncludeSkill(params: {
   const allowBundled = normalizeAllowlist(config?.skills?.allowBundled);
 
   if (skillConfig?.enabled === false) {
+    debugLog.info(`[DEBUG-SKILL] excluded ${entry.skill.name}: enabled=false`);
     return false;
   }
   if (!isBundledSkillAllowed(entry, allowBundled)) {
+    debugLog.info(`[DEBUG-SKILL] excluded ${entry.skill.name}: bundled not allowed`);
     return false;
   }
-  return evaluateRuntimeEligibility({
+  const eligible = evaluateRuntimeEligibility({
     os: entry.metadata?.os,
     remotePlatforms: eligibility?.remote?.platforms,
     always: entry.metadata?.always,
@@ -99,4 +104,8 @@ export function shouldIncludeSkill(params: {
       ),
     isConfigPathTruthy: (configPath) => isConfigPathTruthy(config, configPath),
   });
+  if (!eligible) {
+    debugLog.info(`[DEBUG-SKILL] excluded ${entry.skill.name}: runtime eligibility failed (requires=${JSON.stringify(entry.metadata?.requires ?? null)})`);
+  }
+  return eligible;
 }
