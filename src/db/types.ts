@@ -62,6 +62,7 @@ export interface UserSettings {
 export interface User {
   id: string;
   tenantId: string;
+  channelId: string | null;
   openIds: string[];
   unionId: string | null;
   email: string | null;
@@ -81,6 +82,7 @@ export type SafeUser = Omit<User, "passwordHash">;
 
 export interface CreateUserInput {
   tenantId: string;
+  channelId?: string;
   email?: string;
   password?: string;
   displayName?: string;

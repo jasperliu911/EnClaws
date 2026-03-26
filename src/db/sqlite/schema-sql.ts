@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS users (
   status        TEXT NOT NULL DEFAULT 'active',
   avatar_url    TEXT,
   last_login_at TEXT,
+  channel_id    TEXT REFERENCES tenant_channels(id) ON DELETE SET NULL,
   settings      TEXT NOT NULL DEFAULT '{}',
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
@@ -47,6 +48,7 @@ CREATE INDEX IF NOT EXISTS idx_users_tenant ON users (tenant_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 CREATE INDEX IF NOT EXISTS idx_users_status ON users (tenant_id, status);
 CREATE INDEX IF NOT EXISTS idx_users_union_id ON users (union_id);
+CREATE INDEX IF NOT EXISTS idx_users_channel ON users (channel_id);
 
 -- 3. API Keys
 CREATE TABLE IF NOT EXISTS tenant_api_keys (

@@ -7,4 +7,6 @@
 export interface TenantContext {
   tenantId: string;
   userId: string;
+  /** tenant_channels.id — the channel this context was resolved from. */
+  channelId?: string;
 }

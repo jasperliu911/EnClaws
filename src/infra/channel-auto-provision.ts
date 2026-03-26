@@ -10,12 +10,12 @@
 import { isDbInitialized } from "../db/index.js";
 
 /** In-memory cache to avoid repeated DB lookups within the same process. */
-const provisionedCache = new Map<string, { userId: string; unionId: string; role: string; displayName?: string }>(); // key → result
+const provisionedCache = new Map<string, { userId: string; unionId: string; role: string; displayName?: string; channelId?: string }>(); // key → result
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const provisionedExpiry = new Map<string, number>();
 
-function cacheKey(tenantId: string, openId: string): string {
-  return `${tenantId}:${openId}`;
+function cacheKey(tenantId: string, openId: string, channelId?: string): string {
+  return `${tenantId}:${openId}:${channelId ?? ""}`;
 }
 
 export type AutoProvisionResult = {
@@ -27,6 +27,8 @@ export type AutoProvisionResult = {
   role: string;
   /** Display name from DB (may be a real name resolved from a previous session). */
   displayName?: string;
+  /** tenant_channels.id — the channel this user belongs to. */
+  channelId?: string;
 };
 
 /**
@@ -43,17 +45,18 @@ export async function autoProvisionTenantUser(params: {
   openId: string;
   unionId?: string;
   displayName?: string;
+  channelId?: string;
 }): Promise<AutoProvisionResult | null> {
   if (!isDbInitialized()) return null;
 
-  const { tenantId, openId, unionId, displayName } = params;
-  const key = cacheKey(tenantId, openId);
+  const { tenantId, openId, unionId, displayName, channelId } = params;
+  const key = cacheKey(tenantId, openId, channelId);
 
   // Check in-memory cache
   const cached = provisionedCache.get(key);
   const expiry = provisionedExpiry.get(key);
   if (cached && expiry && expiry > Date.now()) {
-    return { userId: cached.userId, unionId: cached.unionId, userCreated: false, role: cached.role, displayName: cached.displayName };
+    return { userId: cached.userId, unionId: cached.unionId, userCreated: false, role: cached.role, displayName: cached.displayName, channelId: cached.channelId };
   }
 
   const { findOrCreateUserByOpenId } = await import("../db/models/user.js");
@@ -63,6 +66,7 @@ export async function autoProvisionTenantUser(params: {
     openId,
     displayName,
     unionId,
+    channelId,
   );
 
   // Use union_id as directory key; fall back to open_id if union_id is unavailable
@@ -70,10 +74,11 @@ export async function autoProvisionTenantUser(params: {
 
   // Update cache
   const resolvedDisplayName = user.displayName ?? undefined;
-  provisionedCache.set(key, { userId: user.id, unionId: effectiveUnionId, role: user.role, displayName: resolvedDisplayName });
+  const resolvedChannelId = user.channelId ?? channelId;
+  provisionedCache.set(key, { userId: user.id, unionId: effectiveUnionId, role: user.role, displayName: resolvedDisplayName, channelId: resolvedChannelId });
   provisionedExpiry.set(key, Date.now() + CACHE_TTL_MS);
 
-  return { userId: user.id, unionId: effectiveUnionId, userCreated, role: user.role, displayName: resolvedDisplayName };
+  return { userId: user.id, unionId: effectiveUnionId, userCreated, role: user.role, displayName: resolvedDisplayName, channelId: resolvedChannelId };
 }
 
 /**

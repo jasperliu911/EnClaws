@@ -387,7 +387,8 @@ export type PluginRuntime = {
       openId: string;
       unionId?: string;
       displayName?: string;
-    }) => Promise<{ userId: string; unionId: string; userCreated: boolean } | null>;
+      channelId?: string;
+    }) => Promise<{ userId: string; unionId: string; userCreated: boolean; channelId?: string } | null>;
   };
   agent: {
     /** Inject a user message into a running agent session (steer).

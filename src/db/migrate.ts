@@ -77,12 +77,22 @@ async function runMigrations(): Promise<void> {
 
     // Filter out PG-specific migrations (those with PG syntax that won't run on SQLite)
     // 006_user_open_ids_array.sql uses PG array types — skip, already in schema.sql
-    const pgOnlyMigrations = new Set(["006_user_open_ids_array.sql"]);
+    // 002_user_channel_id.sql uses PG ALTER TABLE syntax — handled inline below
+    const pgOnlyMigrations = new Set(["006_user_open_ids_array.sql", "002_user_channel_id.sql"]);
     for (const migration of pgOnlyMigrations) {
       if (!applied.has(migration) && pending.includes(migration)) {
         sqliteQuery("INSERT OR IGNORE INTO _migrations (name) VALUES (?)", [migration]);
         pending = pending.filter((f) => f !== migration);
       }
+    }
+
+    // Inline SQLite migration: add channel_id to users if missing (for existing DBs)
+    const db = getSqliteDb();
+    const cols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+    if (!cols.some((c) => c.name === "channel_id")) {
+      db.exec("ALTER TABLE users ADD COLUMN channel_id TEXT REFERENCES tenant_channels(id) ON DELETE SET NULL");
+      db.exec("CREATE INDEX IF NOT EXISTS idx_users_channel ON users (channel_id)");
+      console.log("[migrate]   ✓ SQLite: added channel_id column to users");
     }
   }
 

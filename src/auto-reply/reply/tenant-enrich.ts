@@ -38,13 +38,21 @@ export async function enrichTenantContext(
   if (ctx.TenantId && ctx.TenantUserId && !ctx.TenantUserRole) {
     try {
       const { autoProvisionTenantUser } = await import("../../infra/channel-auto-provision.js");
+      const { resolveChannelTenantContext } = await import("../../infra/channel-tenant-context.js");
       const senderId = ctx.SenderId;
       if (senderId) {
+        // Resolve channelId from tenant context when available
+        const ctxProvider = (ctx.Provider ?? ctx.Surface ?? "").toLowerCase();
+        const ctxAccountId = (ctx as Record<string, unknown>).AccountId as string | undefined;
+        const tenantCtx = ctxProvider && ctxAccountId
+          ? await resolveChannelTenantContext(ctxProvider, ctxAccountId)
+          : undefined;
         const provisioned = await autoProvisionTenantUser({
           tenantId: ctx.TenantId,
           openId: senderId,
           unionId: ctx.SenderUnionId ?? undefined,
           displayName: ctx.SenderName ?? undefined,
+          channelId: tenantCtx?.channelId,
         });
         if (provisioned) {
           ctx.TenantUserRole = provisioned.role;
@@ -83,12 +91,20 @@ export async function enrichTenantContext(
 
   try {
     const { autoProvisionTenantUser } = await import("../../infra/channel-auto-provision.js");
+    const { resolveChannelTenantContext } = await import("../../infra/channel-tenant-context.js");
+
+    // Resolve channelId from the channel app lookup
+    const accountId = (ctx as Record<string, unknown>).AccountId as string | undefined;
+    const tenantCtx = accountId
+      ? await resolveChannelTenantContext(provider, accountId)
+      : undefined;
 
     const provisioned = await autoProvisionTenantUser({
       tenantId,
       openId: senderId,
       unionId: ctx.SenderUnionId ?? undefined,
       displayName: ctx.SenderName ?? undefined,
+      channelId: tenantCtx?.channelId,
     });
 
     if (provisioned) {

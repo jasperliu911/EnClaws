@@ -143,9 +143,10 @@ export const tenantHandlers: GatewayRequestHandlers = {
       throw err;
     }
 
-    const { status, role, limit, offset } = params as {
+    const { status, role, channelId, limit, offset } = params as {
       status?: string;
       role?: string;
+      channelId?: string;
       limit?: number;
       offset?: number;
     };
@@ -153,6 +154,7 @@ export const tenantHandlers: GatewayRequestHandlers = {
     const result = await listUsers(ctx.tenantId, {
       status: status as any,
       role: role as any,
+      channelId,
       limit,
       offset,
     });

@@ -30,6 +30,7 @@ function rowToUser(row: Record<string, unknown>): User {
   return {
     id: row.id as string,
     tenantId: row.tenant_id as string,
+    channelId: (row.channel_id as string) ?? null,
     openIds,
     unionId: (row.union_id as string) ?? null,
     email: (row.email as string) ?? null,
@@ -55,11 +56,12 @@ export async function createUser(input: CreateUserInput, opts?: { skipDirInit?: 
   const passwordHash = input.password ? await hashPassword(input.password) : null;
 
   sqliteQuery(
-    `INSERT INTO users (id, tenant_id, email, password_hash, display_name, role)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO users (id, tenant_id, channel_id, email, password_hash, display_name, role)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.tenantId,
+      input.channelId ?? null,
       input.email ? input.email.toLowerCase().trim() : null,
       passwordHash,
       input.displayName ?? null,
@@ -120,7 +122,7 @@ export async function findUserByEmail(email: string): Promise<User | null> {
 
 export async function listUsers(
   tenantId: string,
-  opts?: { status?: UserStatus; role?: UserRole; limit?: number; offset?: number },
+  opts?: { status?: UserStatus; role?: UserRole; channelId?: string; limit?: number; offset?: number },
 ): Promise<{ users: SafeUser[]; total: number }> {
   const conditions: string[] = ["tenant_id = ?"];
   const values: unknown[] = [tenantId];
@@ -132,6 +134,10 @@ export async function listUsers(
   if (opts?.role) {
     conditions.push("role = ?");
     values.push(opts.role);
+  }
+  if (opts?.channelId) {
+    conditions.push("channel_id = ?");
+    values.push(opts.channelId);
   }
 
   const where = `WHERE ${conditions.join(" AND ")}`;
@@ -223,15 +229,28 @@ export async function findOrCreateUserByOpenId(
   openId: string,
   displayName?: string,
   unionId?: string,
+  channelId?: string,
 ): Promise<{ user: User; created: boolean }> {
+
+  // Helper: lazily backfill channel_id on legacy records (NULL → current channel)
+  function backfillChannelId(user: User): void {
+    if (channelId && !user.channelId) {
+      sqliteQuery("UPDATE users SET channel_id = ? WHERE id = ?", [channelId, user.id]);
+      user.channelId = channelId;
+    }
+  }
+
   // 1. Try to find by union_id first
   if (unionId) {
     const byUnion = sqliteQuery(
-      "SELECT * FROM users WHERE tenant_id = ? AND union_id = ? AND status = 'active'",
-      [tenantId, unionId],
+      `SELECT * FROM users WHERE tenant_id = ? AND union_id = ? AND status = 'active'
+         AND (channel_id = ? OR channel_id IS NULL)
+       ORDER BY channel_id IS NULL ASC LIMIT 1`,
+      [tenantId, unionId, channelId ?? null],
     );
     if (byUnion.rows.length > 0) {
       const user = rowToUser(byUnion.rows[0]);
+      backfillChannelId(user);
       // Append open_id to array if not already present
       if (openId && !user.openIds.includes(openId)) {
         const newOpenIds = [...user.openIds, openId];
@@ -256,11 +275,14 @@ export async function findOrCreateUserByOpenId(
   const byOpenId = sqliteQuery(
     `SELECT u.* FROM users u
      WHERE u.tenant_id = ? AND u.status = 'active'
-       AND EXISTS (SELECT 1 FROM json_each(u.open_ids) WHERE json_each.value = ?)`,
-    [tenantId, openId],
+       AND EXISTS (SELECT 1 FROM json_each(u.open_ids) WHERE json_each.value = ?)
+       AND (u.channel_id = ? OR u.channel_id IS NULL)
+     ORDER BY u.channel_id IS NULL ASC LIMIT 1`,
+    [tenantId, openId, channelId ?? null],
   );
   if (byOpenId.rows.length > 0) {
     const user = rowToUser(byOpenId.rows[0]);
+    backfillChannelId(user);
     // Update union_id if missing
     if (unionId && !user.unionId) {
       sqliteQuery("UPDATE users SET union_id = ? WHERE id = ?", [unionId, user.id]);
@@ -276,13 +298,13 @@ export async function findOrCreateUserByOpenId(
     return { user, created: false };
   }
 
-  // 3. Create new user
+  // 3. Create new user with channel_id
   const id = generateUUID();
   try {
     sqliteQuery(
-      `INSERT INTO users (id, tenant_id, open_ids, union_id, display_name, role)
-       VALUES (?, ?, ?, ?, ?, 'member')`,
-      [id, tenantId, JSON.stringify([openId]), unionId ?? null, displayName ?? openId],
+      `INSERT INTO users (id, tenant_id, channel_id, open_ids, union_id, display_name, role)
+       VALUES (?, ?, ?, ?, ?, ?, 'member')`,
+      [id, tenantId, channelId ?? null, JSON.stringify([openId]), unionId ?? null, displayName ?? openId],
     );
     const result = sqliteQuery("SELECT * FROM users WHERE id = ?", [id]);
     const user = rowToUser(result.rows[0]);
@@ -308,8 +330,9 @@ export async function findOrCreateUserByOpenId(
     const fallback = sqliteQuery(
       `SELECT u.* FROM users u
        WHERE u.tenant_id = ?
-         AND EXISTS (SELECT 1 FROM json_each(u.open_ids) WHERE json_each.value = ?)`,
-      [tenantId, openId],
+         AND EXISTS (SELECT 1 FROM json_each(u.open_ids) WHERE json_each.value = ?)
+         AND (u.channel_id = ? OR u.channel_id IS NULL)`,
+      [tenantId, openId, channelId ?? null],
     );
     if (fallback.rows.length > 0) {
       return { user: rowToUser(fallback.rows[0]), created: false };

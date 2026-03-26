@@ -45,6 +45,7 @@ CREATE TABLE users (
   status      VARCHAR(32)  NOT NULL DEFAULT 'active', -- active | invited | suspended | deleted
   avatar_url  VARCHAR(1024),
   last_login_at TIMESTAMPTZ,
+  channel_id  UUID         REFERENCES tenant_channels(id) ON DELETE SET NULL,
   settings    JSONB        NOT NULL DEFAULT '{}',  -- user-level preferences
   created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
@@ -55,6 +56,7 @@ CREATE INDEX idx_users_email ON users (email);
 CREATE INDEX idx_users_status ON users (tenant_id, status);
 CREATE INDEX idx_users_open_ids ON users USING GIN (open_ids) WHERE open_ids IS NOT NULL;
 CREATE INDEX idx_users_union_id ON users (union_id) WHERE union_id IS NOT NULL;
+CREATE INDEX idx_users_channel ON users (channel_id) WHERE channel_id IS NOT NULL;
 
 -- ============================================================
 -- 3. API Keys (租户级 AI 提供商密钥)

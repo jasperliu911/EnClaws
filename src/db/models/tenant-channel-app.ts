@@ -109,10 +109,10 @@ export async function updateChannelApp(
 export async function findTenantByChannelApp(
   channelType: string,
   appId: string,
-): Promise<{ tenantId: string; userId: string } | null> {
+): Promise<{ tenantId: string; userId: string; channelId?: string } | null> {
   if (getDbType() === DB_SQLITE) return sqliteChannelApp.findTenantByChannelApp(channelType, appId);
   const result = await query(
-    `SELECT a.tenant_id, c.created_by
+    `SELECT a.tenant_id, c.created_by, c.id as channel_id
      FROM tenant_channel_apps a
      JOIN tenant_channels c ON a.channel_id = c.id
      WHERE c.channel_type = $1
@@ -127,7 +127,7 @@ export async function findTenantByChannelApp(
   const tenantId = row.tenant_id as string;
   const userId = row.created_by as string | null;
   if (!userId) return null;
-  return { tenantId, userId };
+  return { tenantId, userId, channelId: row.channel_id as string };
 }
 
 export async function deleteChannelApp(appDbId: string, tenantId: string): Promise<boolean> {

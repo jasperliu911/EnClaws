@@ -26,6 +26,7 @@ function rowToUser(row: Record<string, unknown>): User {
   return {
     id: row.id as string,
     tenantId: row.tenant_id as string,
+    channelId: (row.channel_id as string) ?? null,
     openIds: Array.isArray(row.open_ids) ? (row.open_ids as string[]) : [],
     unionId: (row.union_id as string) ?? null,
     email: (row.email as string) ?? null,
@@ -76,11 +77,12 @@ export async function createUser(input: CreateUserInput, opts?: { skipDirInit?: 
   if (getDbType() === DB_SQLITE) return sqliteUser.createUser(input, opts);
   const passwordHash = input.password ? await hashPassword(input.password) : null;
   const result = await query(
-    `INSERT INTO users (tenant_id, email, password_hash, display_name, role)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO users (tenant_id, channel_id, email, password_hash, display_name, role)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
     [
       input.tenantId,
+      input.channelId ?? null,
       input.email ? input.email.toLowerCase().trim() : null,
       passwordHash,
       input.displayName ?? null,
@@ -148,7 +150,7 @@ export async function findUserByEmail(email: string): Promise<User | null> {
 
 export async function listUsers(
   tenantId: string,
-  opts?: { status?: UserStatus; role?: UserRole; limit?: number; offset?: number },
+  opts?: { status?: UserStatus; role?: UserRole; channelId?: string; limit?: number; offset?: number },
 ): Promise<{ users: SafeUser[]; total: number }> {
   if (getDbType() === DB_SQLITE) return sqliteUser.listUsers(tenantId, opts);
   const conditions: string[] = ["tenant_id = $1"];
@@ -162,6 +164,10 @@ export async function listUsers(
   if (opts?.role) {
     conditions.push(`role = $${idx++}`);
     values.push(opts.role);
+  }
+  if (opts?.channelId) {
+    conditions.push(`channel_id = $${idx++}`);
+    values.push(opts.channelId);
   }
 
   const where = `WHERE ${conditions.join(" AND ")}`;
@@ -270,16 +276,29 @@ export async function findOrCreateUserByOpenId(
   openId: string,
   displayName?: string,
   unionId?: string,
+  channelId?: string,
 ): Promise<{ user: User; created: boolean }> {
-  if (getDbType() === DB_SQLITE) return sqliteUser.findOrCreateUserByOpenId(tenantId, openId, displayName, unionId);
+  if (getDbType() === DB_SQLITE) return sqliteUser.findOrCreateUserByOpenId(tenantId, openId, displayName, unionId, channelId);
+
+  // Helper: lazily backfill channel_id on legacy records (NULL → current channel)
+  async function backfillChannelId(user: User): Promise<void> {
+    if (channelId && !user.channelId) {
+      await query("UPDATE users SET channel_id = $1 WHERE id = $2", [channelId, user.id]);
+      user.channelId = channelId;
+    }
+  }
+
   // 1. Try to find by union_id first (preferred, cross-app stable identifier)
   if (unionId) {
     const byUnion = await query(
-      "SELECT * FROM users WHERE tenant_id = $1 AND union_id = $2 AND status = 'active'",
-      [tenantId, unionId],
+      `SELECT * FROM users WHERE tenant_id = $1 AND union_id = $2 AND status = 'active'
+         AND (channel_id = $3 OR channel_id IS NULL)
+       ORDER BY channel_id IS NULL ASC LIMIT 1`,
+      [tenantId, unionId, channelId ?? null],
     );
     if (byUnion.rows.length > 0) {
       const user = rowToUser(byUnion.rows[0]);
+      await backfillChannelId(user);
       // Append open_id to array if not already present
       if (openId && !user.openIds.includes(openId)) {
         await query(
@@ -301,11 +320,14 @@ export async function findOrCreateUserByOpenId(
 
   // 2. Fallback: find by open_ids array containment
   const byOpenId = await query(
-    "SELECT * FROM users WHERE tenant_id = $1 AND open_ids @> ARRAY[$2]::varchar[] AND status = 'active'",
-    [tenantId, openId],
+    `SELECT * FROM users WHERE tenant_id = $1 AND open_ids @> ARRAY[$2]::varchar[] AND status = 'active'
+       AND (channel_id = $3 OR channel_id IS NULL)
+     ORDER BY channel_id IS NULL ASC LIMIT 1`,
+    [tenantId, openId, channelId ?? null],
   );
   if (byOpenId.rows.length > 0) {
     const user = rowToUser(byOpenId.rows[0]);
+    await backfillChannelId(user);
     // Update union_id if it was missing and is now available
     if (unionId && !user.unionId) {
       await query("UPDATE users SET union_id = $1 WHERE id = $2", [unionId, user.id]);
@@ -321,13 +343,13 @@ export async function findOrCreateUserByOpenId(
     return { user, created: false };
   }
 
-  // 3. Create new user with open_ids array and union_id
+  // 3. Create new user with open_ids array, union_id, and channel_id
   try {
     const result = await query(
-      `INSERT INTO users (tenant_id, open_ids, union_id, display_name, role)
-       VALUES ($1, ARRAY[$2]::varchar[], $3, $4, 'member')
+      `INSERT INTO users (tenant_id, channel_id, open_ids, union_id, display_name, role)
+       VALUES ($1, $2, ARRAY[$3]::varchar[], $4, $5, 'member')
        RETURNING *`,
-      [tenantId, openId, unionId ?? null, displayName ?? openId],
+      [tenantId, channelId ?? null, openId, unionId ?? null, displayName ?? openId],
     );
     const user = rowToUser(result.rows[0]);
 
@@ -352,8 +374,9 @@ export async function findOrCreateUserByOpenId(
   } catch {
     // Race condition: another request may have created the user
     const fallback = await query(
-      "SELECT * FROM users WHERE tenant_id = $1 AND open_ids @> ARRAY[$2]::varchar[]",
-      [tenantId, openId],
+      `SELECT * FROM users WHERE tenant_id = $1 AND open_ids @> ARRAY[$2]::varchar[]
+         AND (channel_id = $3 OR channel_id IS NULL)`,
+      [tenantId, openId, channelId ?? null],
     );
     if (fallback.rows.length > 0) {
       return { user: rowToUser(fallback.rows[0]), created: false };
