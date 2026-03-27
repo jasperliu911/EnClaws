@@ -779,6 +779,12 @@ export function buildAgentSystemPrompt(params: {
     "## Runtime",
     buildRuntimeLine(runtimeInfo, runtimeChannel, runtimeCapabilities, params.defaultThinkLevel),
     `Reasoning: ${reasoningLevel} (hidden unless on/stream). Toggle /reasoning; /status shows Reasoning when enabled.`,
+    "",
+    "## Skills Reporting (MANDATORY)",
+    "At the very end of your final reply, you MUST append exactly one line:",
+    "- If you used any skill (via inline_skill block or by reading a SKILL.md): `> Skills used: <name1>, <name2>`",
+    "- If you used no skill: `> Skills used: none`",
+    "Do NOT omit this line under any circumstances.",
   );
 
   return lines.filter(Boolean).join("\n");
