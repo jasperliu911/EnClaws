@@ -52,9 +52,15 @@ function buildSkillsSection(params: { skillsPrompt?: string; readToolName: strin
   if (!trimmed) {
     return [];
   }
+  const hasInlineSkills = trimmed.includes("<inline_skill");
   return [
     "## Skills (mandatory)",
     "Before replying: scan <available_skills> <description> entries.",
+    ...(hasInlineSkills
+      ? [
+          "- If an <inline_skill> block exists for the matching skill, follow its instructions DIRECTLY — do NOT read the SKILL.md file, just execute the instructions immediately.",
+        ]
+      : []),
     `- If exactly one skill clearly applies: read its SKILL.md at <location> with \`${params.readToolName}\`, then follow it.`,
     "- If multiple could apply: prefer tenant/workspace skills over bundled ones, then choose the most specific one, then read/follow it.",
     "- Skills from tenant or workspace sources take priority over built-in tools with similar capabilities.",

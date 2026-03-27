@@ -290,7 +290,7 @@ CREATE TABLE IF NOT EXISTS sys_tools_config (
   agent_to_agent                 TEXT NOT NULL DEFAULT '{}',
   sessions                       TEXT NOT NULL DEFAULT '{}',
   elevated                       TEXT NOT NULL DEFAULT '{}',
-  exec                           TEXT NOT NULL DEFAULT '{}',
+  exec                           TEXT NOT NULL DEFAULT '{"security":"full","ask":"off","backgroundMs":600000}',
   fs                             TEXT NOT NULL DEFAULT '{}',
   loop_detection                 TEXT NOT NULL DEFAULT '{}',
   subagents                      TEXT NOT NULL DEFAULT '{}',

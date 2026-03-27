@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   formatSkillsForPrompt,
   loadSkillsFromDir,
+  stripFrontmatter,
   type Skill,
 } from "@mariozechner/pi-coding-agent";
 import type { OpenClawConfig } from "../../config/config.js";
@@ -17,7 +18,9 @@ import { normalizeSkillFilter } from "./filter.js";
 import {
   parseFrontmatter,
   resolveOpenClawMetadata,
+  resolveSkillInline,
   resolveSkillInvocationPolicy,
+  resolveSkillOverrides,
 } from "./frontmatter.js";
 import { resolvePluginSkillDirs } from "./plugin-skills.js";
 import { serializeByKey } from "./serialize.js";
@@ -439,18 +442,27 @@ function loadSkillEntries(
 
   const skillEntries: SkillEntry[] = Array.from(merged.values()).map((skill) => {
     let frontmatter: ParsedSkillFrontmatter = {};
+    let rawContent = "";
     try {
-      const raw = fs.readFileSync(skill.filePath, "utf-8");
-      frontmatter = parseFrontmatter(raw);
+      rawContent = fs.readFileSync(skill.filePath, "utf-8");
+      frontmatter = parseFrontmatter(rawContent);
     } catch {
       // ignore malformed skills
     }
-    return {
+    const overrides = resolveSkillOverrides(frontmatter);
+    const inline = resolveSkillInline(frontmatter);
+    const entry: SkillEntry = {
       skill,
       frontmatter,
       metadata: resolveOpenClawMetadata(frontmatter),
       invocation: resolveSkillInvocationPolicy(frontmatter),
+      ...(overrides.length > 0 ? { overrides } : {}),
     };
+    if (inline && rawContent) {
+      entry.inline = true;
+      entry.inlineContent = stripFrontmatter(rawContent).trim();
+    }
+    return entry;
   });
   skillsLogger.info(`[DEBUG-SKILL] merged total=${skillEntries.length} names=${skillEntries.map((e) => e.skill.name).join(",")}`);
   return skillEntries;
@@ -500,6 +512,10 @@ export function buildWorkspaceSkillSnapshot(
 ): SkillSnapshot {
   const { eligible, prompt, resolvedSkills } = resolveWorkspaceSkillPromptState(workspaceDir, opts);
   const skillFilter = normalizeSkillFilter(opts?.skillFilter);
+  const skillOverrides = eligible
+    .filter((e) => e.overrides && e.overrides.length > 0)
+    .flatMap((e) => e.overrides!);
+  skillsLogger.info(`[DEBUG-SKILL] snapshot overrides: eligible=${eligible.map((e) => `${e.skill.name}(overrides=${JSON.stringify(e.overrides ?? [])})`).join(",")} collected=${JSON.stringify(skillOverrides)}`);
   return {
     prompt,
     skills: eligible.map((entry) => ({
@@ -509,6 +525,7 @@ export function buildWorkspaceSkillSnapshot(
     })),
     ...(skillFilter === undefined ? {} : { skillFilter }),
     resolvedSkills,
+    ...(skillOverrides.length > 0 ? { skillOverrides } : {}),
     version: opts?.snapshotVersion,
   };
 }
@@ -557,10 +574,20 @@ function resolveWorkspaceSkillPromptState(
   const truncationNote = truncated
     ? `⚠️ Skills truncated: included ${skillsForPrompt.length} of ${resolvedSkills.length}. Run \`openclaw skills check\` to audit.`
     : "";
+  // Build inline skill content blocks for skills with inline: true
+  const inlineBlocks: string[] = [];
+  for (const entry of promptEntries) {
+    if (entry.inline && entry.inlineContent) {
+      inlineBlocks.push(
+        `\n<inline_skill name="${entry.skill.name}">\n${entry.inlineContent}\n</inline_skill>`,
+      );
+    }
+  }
   const prompt = [
     remoteNote,
     truncationNote,
     formatSkillsForPrompt(compactSkillPaths(skillsForPrompt)),
+    ...inlineBlocks,
   ]
     .filter(Boolean)
     .join("\n");

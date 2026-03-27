@@ -70,6 +70,12 @@ export type SkillEntry = {
   frontmatter: ParsedSkillFrontmatter;
   metadata?: OpenClawSkillMetadata;
   invocation?: SkillInvocationPolicy;
+  /** Tool names that this skill overrides (disables from plugin tools). */
+  overrides?: string[];
+  /** If true, the full SKILL.md content is inlined into the system prompt. */
+  inline?: boolean;
+  /** Raw SKILL.md content (without frontmatter) for inline injection. */
+  inlineContent?: string;
 };
 
 export type SkillEligibilityContext = {
@@ -87,5 +93,7 @@ export type SkillSnapshot = {
   /** Normalized agent-level filter used to build this snapshot; undefined means unrestricted. */
   skillFilter?: string[];
   resolvedSkills?: Skill[];
+  /** Tool names overridden by skills in this snapshot (used to suppress plugin tools). */
+  skillOverrides?: string[];
   version?: number;
 };

@@ -552,6 +552,13 @@ export async function runEmbeddedAttempt(
     }
     // Check if the model supports native image input
     const modelHasVision = params.model.input?.includes("image") ?? false;
+    // Collect tool names overridden by active skills (tenant skills can suppress plugin tools)
+    const skillOverrides = skillEntries.length > 0
+      ? skillEntries
+          .filter((e) => e.overrides && e.overrides.length > 0)
+          .flatMap((e) => e.overrides!)
+      : (params.skillsSnapshot?.skillOverrides ?? []);
+
     const toolsRaw = params.disableTools
       ? []
       : createOpenClawCodingTools({
@@ -560,6 +567,7 @@ export async function runEmbeddedAttempt(
             ...params.execOverrides,
             elevated: params.bashElevated,
           },
+          skillOverrides: skillOverrides.length > 0 ? skillOverrides : undefined,
           sandbox,
           messageProvider: params.messageChannel ?? params.messageProvider,
           agentAccountId: params.agentAccountId,

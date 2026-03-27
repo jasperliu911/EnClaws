@@ -13,6 +13,8 @@
  * This allows external plugins to work unmodified in multi-tenant deployments.
  */
 
+import fs from "node:fs";
+import path from "node:path";
 import type { OpenClawConfig } from "../../config/config.js";
 import type { FinalizedMsgContext } from "../templating.js";
 import { logVerbose } from "../../globals.js";
@@ -131,6 +133,16 @@ export async function enrichTenantContext(
   if (ctx.TenantId && isMissingSenderName(ctx)) {
     await resolveFeishuSenderName(ctx, cfg);
   }
+
+  // Sync appId/appSecret from DB config into tenant _shared/config.json
+  // so that SKILL.md scripts can read credentials without platform coupling.
+  if (ctx.TenantId) {
+    const ctxProvider2 = (ctx.Provider ?? ctx.Surface ?? "").toLowerCase();
+    const ctxAccountId2 = (ctx as Record<string, unknown>).AccountId as string | undefined;
+    if (ctxProvider2 === "feishu") {
+      syncFeishuSkillConfig(ctx.TenantId, cfg, ctxProvider2, ctxAccountId2);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -143,6 +155,71 @@ function isPlaceholderName(name: string): boolean {
 
 function isMissingSenderName(ctx: FinalizedMsgContext): boolean {
   return !ctx.SenderName || isPlaceholderName(ctx.SenderName);
+}
+
+// ---------------------------------------------------------------------------
+// Feishu skill config sync
+// ---------------------------------------------------------------------------
+
+/**
+ * In-memory cache of (tenantId + appId) pairs already written, to avoid
+ * redundant file I/O on every message.
+ */
+const skillConfigSynced = new Set<string>();
+
+/**
+ * Write appId/appSecret from the runtime config into the tenant's
+ * _shared/config.json so that SKILL.md scripts can read credentials
+ * without needing platform-specific env vars.
+ *
+ * Writes are idempotent: no-op when the file already matches, and the
+ * in-memory cache prevents repeated disk reads after the first sync.
+ */
+function syncFeishuSkillConfig(
+  tenantId: string,
+  cfg: OpenClawConfig,
+  provider: string,
+  accountId: string | undefined,
+): void {
+  try {
+    const { extractFeishuCredentials } = require("../../infra/feishu-user-resolve.js");
+    const creds = extractFeishuCredentials(
+      cfg as unknown as Record<string, unknown>,
+      provider,
+      accountId,
+    ) as { appId: string; appSecret: string } | null;
+    if (!creds?.appId || !creds?.appSecret) return;
+
+    const cacheKey = `${tenantId}:${creds.appId}`;
+    if (skillConfigSynced.has(cacheKey)) return;
+
+    const { resolveTenantSkillsDir } = require("../../config/sessions/tenant-paths.js");
+    const sharedDir = path.join(resolveTenantSkillsDir(tenantId), "feishu-auth");
+    const cfgPath = path.join(sharedDir, "config.json");
+
+    // Check if already up-to-date
+    try {
+      const existing = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+      if (existing.appId === creds.appId && existing.appSecret === creds.appSecret) {
+        skillConfigSynced.add(cacheKey);
+        return;
+      }
+    } catch {
+      // File missing or unparseable — will write below
+    }
+
+    fs.mkdirSync(sharedDir, { recursive: true });
+    fs.writeFileSync(
+      cfgPath,
+      JSON.stringify({ appId: creds.appId, appSecret: creds.appSecret, brand: "feishu" }, null, 2),
+      "utf8",
+    );
+    skillConfigSynced.add(cacheKey);
+    logVerbose(`[tenant-enrich] synced feishu skill config for tenant ${tenantId}`);
+  } catch (err) {
+    // Non-fatal — scripts will fall back to manually-configured file
+    logVerbose(`[tenant-enrich] failed to sync feishu skill config: ${String(err)}`);
+  }
 }
 
 /**

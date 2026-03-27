@@ -246,6 +246,8 @@ export function createOpenClawCodingTools(options?: {
   tenantUserId?: string;
   /** Tenant user role for permission checks during tool execution. */
   tenantUserRole?: string;
+  /** Tool names overridden by skills (these plugin tools will be removed). */
+  skillOverrides?: string[];
 }): AnyAgentTool[] {
   const execToolName = "exec";
   const sandbox = options?.sandbox?.enabled ? options.sandbox : undefined;
@@ -544,10 +546,22 @@ export function createOpenClawCodingTools(options?: {
       },
     ],
   });
+  // Remove plugin tools that are overridden by tenant/workspace skills.
+  const overrideSet = options?.skillOverrides?.length
+    ? new Set(options.skillOverrides.map((n) => n.toLowerCase()))
+    : undefined;
+  if (overrideSet) {
+    const removed = subagentFiltered.filter((tool) => overrideSet.has(tool.name.toLowerCase())).map((t) => t.name);
+    if (removed.length > 0) logWarn(`[skill-overrides] removing tools: ${removed.join(", ")}`);
+  }
+  const afterSkillOverrides = overrideSet
+    ? subagentFiltered.filter((tool) => !overrideSet.has(tool.name.toLowerCase()))
+    : subagentFiltered;
+
   // Always normalize tool JSON Schemas before handing them to pi-agent/pi-ai.
   // Without this, some providers (notably OpenAI) will reject root-level union schemas.
   // Provider-specific cleaning: Gemini needs constraint keywords stripped, but Anthropic expects them.
-  const normalized = subagentFiltered.map((tool) =>
+  const normalized = afterSkillOverrides.map((tool) =>
     normalizeToolParameters(tool, { modelProvider: options?.modelProvider }),
   );
   const withHooks = normalized.map((tool) =>

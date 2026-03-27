@@ -223,6 +223,15 @@ export function resolveSkillInvocationPolicy(
   };
 }
 
+export function resolveSkillOverrides(frontmatter: ParsedSkillFrontmatter): string[] {
+  const raw = frontmatter.overrides;
+  return normalizeStringList(raw);
+}
+
+export function resolveSkillInline(frontmatter: ParsedSkillFrontmatter): boolean {
+  return parseFrontmatterBool(getFrontmatterString(frontmatter, "inline"), false);
+}
+
 export function resolveSkillKey(skill: Skill, entry?: SkillEntry): string {
   return entry?.metadata?.skillKey ?? skill.name;
 }

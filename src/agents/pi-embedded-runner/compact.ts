@@ -366,10 +366,18 @@ export async function compactEmbeddedPiSessionDirect(
       warn: makeBootstrapWarn({ sessionLabel, warn: (message) => log.warn(message) }),
     });
     const runAbortController = new AbortController();
+    // Collect tool names overridden by active skills
+    const skillOverrides = skillEntries.length > 0
+      ? skillEntries
+          .filter((e) => e.overrides && e.overrides.length > 0)
+          .flatMap((e) => e.overrides!)
+      : (params.skillsSnapshot?.skillOverrides ?? []);
+
     const toolsRaw = createOpenClawCodingTools({
       exec: {
         elevated: params.bashElevated,
       },
+      skillOverrides: skillOverrides.length > 0 ? skillOverrides : undefined,
       sandbox,
       messageProvider: params.messageChannel ?? params.messageProvider,
       agentAccountId: params.agentAccountId,

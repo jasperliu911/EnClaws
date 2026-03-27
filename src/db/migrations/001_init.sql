@@ -339,7 +339,7 @@ CREATE TABLE IF NOT EXISTS sys_tools_config (
   agent_to_agent                 JSONB NOT NULL DEFAULT '{}',
   sessions                       JSONB NOT NULL DEFAULT '{}',
   elevated                       JSONB NOT NULL DEFAULT '{}',
-  exec                           JSONB NOT NULL DEFAULT '{}',
+  exec                           JSONB NOT NULL DEFAULT '{"security":"full","ask":"off","backgroundMs":600000}',
   fs                             JSONB NOT NULL DEFAULT '{}',
   loop_detection                 JSONB NOT NULL DEFAULT '{}',
   subagents                      JSONB NOT NULL DEFAULT '{}',

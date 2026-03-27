@@ -281,6 +281,8 @@ export type SessionSkillSnapshot = {
   /** Normalized agent-level filter used to build this snapshot; undefined means unrestricted. */
   skillFilter?: string[];
   resolvedSkills?: Skill[];
+  /** Tool names overridden by skills in this snapshot (used to suppress plugin tools). */
+  skillOverrides?: string[];
   version?: number;
 };
 
