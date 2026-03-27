@@ -96,7 +96,10 @@ cd EnClaws
 pnpm install
 pnpm build
 
-# 3. 启动 Gateway
+# 3. 注册 enclaws 全局命令
+npm link
+
+# 4. 启动 Gateway
 enclaws gateway
 ```
 

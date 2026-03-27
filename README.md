@@ -96,7 +96,10 @@ cd EnClaws
 pnpm install
 pnpm build
 
-# 3. Start the Gateway
+# 3. Register the enclaws command globally
+npm link
+
+# 4. Start the Gateway
 enclaws gateway
 ```
 
