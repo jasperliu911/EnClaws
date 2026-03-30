@@ -193,6 +193,7 @@
     "google-auth-library": "10.5.0",
     "grammy": "^1.40.1",
     "https-proxy-agent": "^7.0.6",
+    "image-size": "^2.0.2",
     "ipaddr.js": "^2.3.0",
     "jiti": "^2.6.1",
     "json5": "^2.2.3",
