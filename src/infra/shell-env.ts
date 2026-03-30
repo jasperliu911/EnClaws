@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { isTruthyEnvValue } from "./env.js";
 import { sanitizeHostExecEnv } from "./host-env-security.js";
+import { PRODUCT_NAME_LOWER } from "../version.js";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_MAX_BUFFER_BYTES = 2 * 1024 * 1024;
@@ -166,7 +167,7 @@ export function loadShellEnvFallback(opts: ShellEnvFallbackOptions): ShellEnvFal
     exec: opts.exec,
   });
   if (!probe.ok) {
-    logger.warn(`[openclaw] shell env fallback failed: ${probe.error}`);
+    logger.warn(`[${PRODUCT_NAME_LOWER}] shell env fallback failed: ${probe.error}`);
     lastAppliedKeys = [];
     return { ok: false, error: probe.error, applied: [] };
   }

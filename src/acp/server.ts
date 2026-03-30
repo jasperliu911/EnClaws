@@ -3,6 +3,7 @@ import { Readable, Writable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { AgentSideConnection, ndJsonStream } from "@agentclientprotocol/sdk";
 import { loadConfig } from "../config/config.js";
+import { PRODUCT_NAME_LOWER } from "../version.js";
 import { buildGatewayConnectionDetails } from "../gateway/call.js";
 import { GatewayClient } from "../gateway/client.js";
 import { resolveGatewayCredentialsFromConfig } from "../gateway/credentials.js";
@@ -203,7 +204,7 @@ function parseArgs(args: string[]): AcpServerOptions {
 }
 
 function printHelp(): void {
-  console.log(`Usage: openclaw acp [options]
+  console.log(`Usage: ${PRODUCT_NAME_LOWER} acp [options]
 
 Gateway-backed ACP server for IDE integration.
 

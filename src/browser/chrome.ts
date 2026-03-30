@@ -5,6 +5,7 @@ import path from "node:path";
 import WebSocket from "ws";
 import { ensurePortAvailable } from "../infra/ports.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
+import { PRODUCT_NAME_LOWER } from "../version.js";
 import { CONFIG_DIR } from "../utils.js";
 import { appendCdpPath } from "./cdp.helpers.js";
 import { getHeadersWithAuth, normalizeCdpWsUrl } from "./cdp.js";
@@ -273,16 +274,16 @@ export async function launchOpenClawChrome(
         name: profile.name,
         color: profile.color,
       });
-      log.info(`🦞 openclaw browser profile decorated (${profile.color})`);
+      log.info(`🦞 ${PRODUCT_NAME_LOWER} browser profile decorated (${profile.color})`);
     } catch (err) {
-      log.warn(`openclaw browser profile decoration failed: ${String(err)}`);
+      log.warn(`${PRODUCT_NAME_LOWER} browser profile decoration failed: ${String(err)}`);
     }
   }
 
   try {
     ensureProfileCleanExit(userDataDir);
   } catch (err) {
-    log.warn(`openclaw browser clean-exit prefs failed: ${String(err)}`);
+    log.warn(`${PRODUCT_NAME_LOWER} browser clean-exit prefs failed: ${String(err)}`);
   }
 
   const proc = spawnOnce();

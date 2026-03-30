@@ -9,6 +9,7 @@ import { defaultRuntime } from "../runtime.js";
 import { formatDocsLink } from "../terminal/links.js";
 import { theme } from "../terminal/theme.js";
 import { shortenHomePath } from "../utils.js";
+import { PRODUCT_NAME_LOWER } from "../version.js";
 import { formatCliCommand } from "./command-format.js";
 
 type PathSegment = string;
@@ -232,7 +233,7 @@ async function loadValidConfig(runtime: RuntimeEnv = defaultRuntime) {
   for (const issue of snapshot.issues) {
     runtime.error(`- ${issue.path || "<root>"}: ${issue.message}`);
   }
-  runtime.error(`Run \`${formatCliCommand("openclaw doctor")}\` to repair, then retry.`);
+  runtime.error(`Run \`${formatCliCommand(`${PRODUCT_NAME_LOWER} doctor`)}\` to repair, then retry.`);
   runtime.exit(1);
   return snapshot;
 }

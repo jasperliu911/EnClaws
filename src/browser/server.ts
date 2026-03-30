@@ -2,6 +2,7 @@ import type { Server } from "node:http";
 import express from "express";
 import { loadConfig } from "../config/config.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
+import { PRODUCT_NAME_LOWER } from "../version.js";
 import { resolveBrowserConfig } from "./config.js";
 import { ensureBrowserControlAuth, resolveBrowserControlAuth } from "./control-auth.js";
 import { isPwAiLoaded } from "./pw-ai-state.js";
@@ -66,7 +67,7 @@ export async function startBrowserControlServerFromConfig(): Promise<BrowserServ
     const s = app.listen(port, "127.0.0.1", () => resolve(s));
     s.once("error", reject);
   }).catch((err) => {
-    logServer.error(`openclaw browser server failed to bind 127.0.0.1:${port}: ${String(err)}`);
+    logServer.error(`${PRODUCT_NAME_LOWER} browser server failed to bind 127.0.0.1:${port}: ${String(err)}`);
     return null;
   });
 

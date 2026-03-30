@@ -1,6 +1,7 @@
 import { formatCliCommand } from "../cli/command-format.js";
 import { type OpenClawConfig, readConfigFileSnapshot } from "../config/config.js";
 import type { RuntimeEnv } from "../runtime.js";
+import { PRODUCT_NAME_LOWER } from "../version.js";
 
 export async function requireValidConfigSnapshot(
   runtime: RuntimeEnv,
@@ -12,7 +13,7 @@ export async function requireValidConfigSnapshot(
         ? snapshot.issues.map((issue) => `- ${issue.path}: ${issue.message}`).join("\n")
         : "Unknown validation issue.";
     runtime.error(`Config invalid:\n${issues}`);
-    runtime.error(`Fix the config or run ${formatCliCommand("openclaw doctor")}.`);
+    runtime.error(`Fix the config or run ${formatCliCommand(`${PRODUCT_NAME_LOWER} doctor`)}.`);
     runtime.exit(1);
     return null;
   }
