@@ -59,20 +59,48 @@
 
 如果说 OpenClaw 是个人操作员，那么 EnClaws 就是企业级运行环境。
 
-## 快速开始 (TL;DR)
+## 快速开始
 
-在仓库根目录下执行：
+### 方式一 — npm 安装（全平台）
 
 ```bash
-git clone https://github.com/hashSTACS/EnClaws.git
-cd EnClaws
-docker-compose up -d
+npm install -g enclaws
+enclaws gateway
 ```
 
-容器启动后，打开 **Web 管理面板**，开始配置你的多用户企业级助手环境。
+### 方式二 — Windows 一键安装包
 
-> [!NOTE]
-> 当前公开文档仅覆盖上述最小化启动命令，以及存在一个 Web 管理面板这一点。更多设置细节会在后续文档发布时补充。
+从 [Releases](https://github.com/hashSTACS-Global/EnClaws/releases) 下载 `EnClaws-Setup-x.x.x.exe`，双击安装即可。无需管理员权限，内置 Node.js 运行时，完全离线安装。
+
+安装后双击桌面快捷方式 "EnClaws" 或在新终端中运行 `enclaws gateway`。
+
+### 方式三 — 一行命令安装（macOS / Linux）
+
+```bash
+curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/hashSTACS-Global/EnClaws/main/install.sh | bash
+```
+
+### 方式四 — 从源码构建
+
+**前置条件：** 已安装 [Node.js](https://nodejs.org/) >= 22.12.0 及 [pnpm](https://pnpm.io/)。
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/hashSTACS-Global/EnClaws.git
+cd EnClaws
+
+# 2. 安装依赖并构建
+pnpm install
+pnpm build
+
+# 3. 注册 enclaws 全局命令
+npm link
+
+# 4. 启动 Gateway
+enclaws gateway
+```
+
+启动完成后，Gateway 默认可通过 `http://localhost:18789` 访问。
 
 <p align="center">
   <img src="./docs/assets/dashboard-enclaws-placeholder.jpg" alt="EnClaws dashboard placeholder" width="92%" />
@@ -282,4 +310,3 @@ EnClaws 站在开源巨人的肩膀上。我们在此诚挚感谢：
 源代码依据 Apache License 2.0 开放，但项目名称、标志和品牌标识均为保留权利内容。
 
 Apache License 2.0 **不授予**商标权。有关允许与禁止的品牌使用方式，请参见 **[TRADEMARK.md](./TRADEMARK.md)**。
-
