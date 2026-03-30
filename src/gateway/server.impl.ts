@@ -214,6 +214,8 @@ export async function startGatewayServer(
   const minimalTestGateway =
     process.env.VITEST === "1" && process.env.OPENCLAW_TEST_MINIMAL_GATEWAY === "1";
 
+
+
   // Ensure all default port derivations (browser/canvas) see the actual runtime port.
   process.env.OPENCLAW_GATEWAY_PORT = String(port);
   logAcceptedEnvOption({
@@ -664,7 +666,7 @@ export async function startGatewayServer(
         checkIntervalMs: (healthCheckMinutes ?? 5) * 60_000,
       });
 
-  if (!minimalTestGateway) {
+  if (!minimalTestGateway && !isMultiTenantMode()) {
     void cron.start().catch((err) => logCron.error(`failed to start: ${String(err)}`));
   }
 

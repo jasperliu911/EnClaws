@@ -13,6 +13,10 @@ import {
   resolveAgentWorkspaceDir,
 } from "../agents/agent-scope.js";
 import { ensureAuthProfileStore } from "../agents/auth-profiles.js";
+import {
+  resolveTenantAgentDir,
+  resolveTenantAgentWorkspaceDir,
+} from "../config/sessions/tenant-paths.js";
 import { clearSessionAuthProfileOverride } from "../agents/auth-profiles/session-override.js";
 import { runCliAgent } from "../agents/cli-runner.js";
 import { getCliSessionId, setCliSessionId } from "../agents/cli-session.js";
@@ -440,8 +444,12 @@ export async function agentCommand(
     agentId: sessionAgentId,
     sessionKey,
   });
-  const workspaceDirRaw = resolveAgentWorkspaceDir(cfg, sessionAgentId);
-  const agentDir = resolveAgentDir(cfg, sessionAgentId);
+  const workspaceDirRaw = opts.tenantId
+    ? resolveTenantAgentWorkspaceDir(opts.tenantId, sessionAgentId, opts.tenantUserId)
+    : resolveAgentWorkspaceDir(cfg, sessionAgentId);
+  const agentDir = opts.tenantId
+    ? resolveTenantAgentDir(opts.tenantId, sessionAgentId)
+    : resolveAgentDir(cfg, sessionAgentId);
   const workspace = await ensureAgentWorkspace({
     dir: workspaceDirRaw,
     ensureBootstrapFiles: !agentCfg?.skipBootstrap,

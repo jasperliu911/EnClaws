@@ -65,6 +65,16 @@ async function ensureSessionHeader(params: {
   if (fs.existsSync(params.sessionFile)) {
     return;
   }
+  // In multi-tenant mode, block transcript writes to root-level agents dir.
+  {
+    const normalizedPath = params.sessionFile.replace(/\\/g, '/');
+    if (normalizedPath.includes('/agents/') && !normalizedPath.includes('/tenants/')) {
+      const { isMultiTenantMode } = await import("../../config/multi-tenant.js");
+      if (isMultiTenantMode()) {
+        return;
+      }
+    }
+  }
   await fs.promises.mkdir(path.dirname(params.sessionFile), { recursive: true });
   const header = {
     type: "session",

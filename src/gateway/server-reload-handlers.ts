@@ -19,6 +19,7 @@ import { CommandLane } from "../process/lanes.js";
 import type { ChannelKind, GatewayReloadPlan } from "./config-reload.js";
 import { resolveHooksConfig } from "./hooks.js";
 import { startBrowserControlServerIfEnabled } from "./server-browser.js";
+import { isMultiTenantMode } from "../config/multi-tenant.js";
 import { buildGatewayCronService, type GatewayCronState } from "./server-cron.js";
 
 type GatewayHotReloadState = {
@@ -74,9 +75,11 @@ export function createGatewayReloadHandlers(params: {
         deps: params.deps,
         broadcast: params.broadcast,
       });
-      void nextState.cronState.cron
-        .start()
-        .catch((err) => params.logCron.error(`failed to start: ${String(err)}`));
+      if (!isMultiTenantMode()) {
+        void nextState.cronState.cron
+          .start()
+          .catch((err) => params.logCron.error(`failed to start: ${String(err)}`));
+      }
     }
 
     if (plan.restartBrowserControl) {
