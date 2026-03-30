@@ -11,6 +11,8 @@ import { login, register, type AuthState } from "../auth-store.ts";
 import { loadSettings, saveSettings } from "../storage.ts";
 import { t, i18n, I18nController, SUPPORTED_LOCALES } from "../../i18n/index.ts";
 import type { Locale } from "../../i18n/index.ts";
+import type { ThemeMode } from "../theme.ts";
+import { resolveTheme } from "../theme.ts";
 import "../components/language-switcher.ts";
 
 type AuthMode = "login" | "register";
@@ -34,16 +36,83 @@ export class OpenClawLogin extends LitElement {
       position: relative;
     }
 
-    .lang-switcher {
+    .top-toolbar {
       position: fixed;
       top: 1rem;
       right: 1rem;
       z-index: 200;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .lang-switcher {
       --text-color: var(--text, #e5e5e5);
       --surface-1: var(--card, #141414);
       --surface-2: rgba(255, 255, 255, 0.08);
       --border-color: var(--border, #262626);
       --primary-color: var(--accent, #3b82f6);
+    }
+
+    .theme-toggle {
+      --theme-item: 28px;
+      --theme-gap: 2px;
+      --theme-pad: 4px;
+      position: relative;
+    }
+    .theme-toggle__track {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(3, var(--theme-item));
+      gap: var(--theme-gap);
+      padding: var(--theme-pad);
+      border-radius: 9999px;
+      border: 1px solid var(--border, #262626);
+      background: var(--secondary, #1a1a1a);
+    }
+    .theme-toggle__indicator {
+      position: absolute;
+      top: 50%;
+      left: var(--theme-pad);
+      width: var(--theme-item);
+      height: var(--theme-item);
+      border-radius: 9999px;
+      transform: translateY(-50%) translateX(calc(var(--theme-index, 0) * (var(--theme-item) + var(--theme-gap))));
+      background: var(--accent, #3b82f6);
+      transition: transform 0.2s ease-out;
+      z-index: 0;
+    }
+    .theme-toggle__button {
+      height: var(--theme-item);
+      width: var(--theme-item);
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 9999px;
+      background: transparent;
+      color: var(--muted, #525252);
+      cursor: pointer;
+      position: relative;
+      z-index: 1;
+      transition: color 0.15s ease;
+    }
+    .theme-toggle__button:hover {
+      color: var(--text, #e5e5e5);
+    }
+    .theme-toggle__button.active {
+      color: var(--accent-foreground, #fff);
+    }
+    .theme-toggle__button.active .theme-icon {
+      stroke: var(--accent-foreground, #fff);
+    }
+    .theme-icon {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.5px;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
     .login-container {
@@ -208,6 +277,7 @@ export class OpenClawLogin extends LitElement {
   @property({ type: String }) gatewayUrl = "";
   @state() private mode: AuthMode = "login";
   @state() private loading = false;
+  @state() private currentTheme: ThemeMode = loadSettings().theme ?? "system";
   /** Stores the raw server error message; translated at render time. */
   @state() private serverError = "";
   @state() private fieldErrors: FieldErrors = {};
@@ -392,6 +462,16 @@ export class OpenClawLogin extends LitElement {
     this.regDisplayName = "";
   }
 
+  private applyTheme(next: ThemeMode, _e?: MouseEvent) {
+    this.currentTheme = next;
+    const settings = loadSettings();
+    saveSettings({ ...settings, theme: next });
+    const resolved = resolveTheme(next);
+    const root = document.documentElement;
+    root.dataset.theme = resolved;
+    root.style.colorScheme = resolved;
+  }
+
   private autoSlug() {
     if (!this.regTenantSlug && this.regTenantName) {
       this.regTenantSlug = this.regTenantName
@@ -403,11 +483,30 @@ export class OpenClawLogin extends LitElement {
 
   render() {
     return html`
-      <div class="lang-switcher">
-        <language-switcher
-          .locale=${i18n.getLocale()}
-          @locale-change=${this.handleLocaleChange}
-        ></language-switcher>
+      <div class="top-toolbar">
+        <div class="lang-switcher">
+          <language-switcher
+            .locale=${i18n.getLocale()}
+            @locale-change=${this.handleLocaleChange}
+          ></language-switcher>
+        </div>
+        <div class="theme-toggle" style="--theme-index: ${Math.max(0, ["system", "light", "dark"].indexOf(this.currentTheme))};">
+          <div class="theme-toggle__track" role="group" aria-label="Theme">
+            <span class="theme-toggle__indicator"></span>
+            <button class="theme-toggle__button ${this.currentTheme === "system" ? "active" : ""}"
+              @click=${(e: MouseEvent) => this.applyTheme("system", e)} aria-label="System" title="System">
+              <svg class="theme-icon" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            </button>
+            <button class="theme-toggle__button ${this.currentTheme === "light" ? "active" : ""}"
+              @click=${(e: MouseEvent) => this.applyTheme("light", e)} aria-label="Light" title="Light">
+              <svg class="theme-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            </button>
+            <button class="theme-toggle__button ${this.currentTheme === "dark" ? "active" : ""}"
+              @click=${(e: MouseEvent) => this.applyTheme("dark", e)} aria-label="Dark" title="Dark">
+              <svg class="theme-icon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+            </button>
+          </div>
+        </div>
       </div>
       <div class="login-container">
         <div class="login-card">
