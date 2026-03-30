@@ -88,6 +88,11 @@ export function resolveRuntimeServiceVersion(
   );
 }
 
+// Product display name — single source of truth for branding.
+export const PRODUCT_NAME = "EnClaws";
+export const PRODUCT_NAME_UPPER = PRODUCT_NAME.toUpperCase();
+export const PRODUCT_NAME_LOWER = PRODUCT_NAME.toLowerCase();
+
 // Single source of truth for the current OpenClaw version.
 // - Embedded/bundled builds: injected define or env var.
 // - Dev/npm builds: package.json.
