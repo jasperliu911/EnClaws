@@ -227,7 +227,7 @@ CREATE INDEX idx_audit_action ON audit_logs (tenant_id, action);
 CREATE TABLE usage_records (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id   UUID         NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  user_id     UUID         REFERENCES users(id) ON DELETE SET NULL,
+  user_id     VARCHAR(64),
   agent_id    VARCHAR(128),
   provider    VARCHAR(64),
   model       VARCHAR(128),
