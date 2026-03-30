@@ -55,15 +55,15 @@ export function registerStatusHealthSessionsCommands(program: Command) {
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
-          ["openclaw status", "Show channel health + session summary."],
-          ["openclaw status --all", "Full diagnosis (read-only)."],
-          ["openclaw status --json", "Machine-readable output."],
-          ["openclaw status --usage", "Show model provider usage/quota snapshots."],
+          ["enclaws status", "Show channel health + session summary."],
+          ["enclaws status --all", "Full diagnosis (read-only)."],
+          ["enclaws status --json", "Machine-readable output."],
+          ["enclaws status --usage", "Show model provider usage/quota snapshots."],
           [
-            "openclaw status --deep",
+            "enclaws status --deep",
             "Run channel probes (WA + Telegram + Discord + Slack + Signal).",
           ],
-          ["openclaw status --deep --timeout 5000", "Tighten probe timeout."],
+          ["enclaws status --deep --timeout 5000", "Tighten probe timeout."],
         ])}`,
     )
     .addHelpText(
@@ -125,12 +125,12 @@ export function registerStatusHealthSessionsCommands(program: Command) {
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
-          ["openclaw sessions", "List all sessions."],
-          ["openclaw sessions --agent work", "List sessions for one agent."],
-          ["openclaw sessions --all-agents", "Aggregate sessions across agents."],
-          ["openclaw sessions --active 120", "Only last 2 hours."],
-          ["openclaw sessions --json", "Machine-readable output."],
-          ["openclaw sessions --store ./tmp/sessions.json", "Use a specific session store."],
+          ["enclaws sessions", "List all sessions."],
+          ["enclaws sessions --agent work", "List sessions for one agent."],
+          ["enclaws sessions --all-agents", "Aggregate sessions across agents."],
+          ["enclaws sessions --active 120", "Only last 2 hours."],
+          ["enclaws sessions --json", "Machine-readable output."],
+          ["enclaws sessions --store ./tmp/sessions.json", "Use a specific session store."],
         ])}\n\n${theme.muted(
           "Shows token usage per session when the agent reports it; set agents.defaults.contextTokens to cap the window and show %.",
         )}`,
@@ -174,16 +174,16 @@ export function registerStatusHealthSessionsCommands(program: Command) {
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
-          ["openclaw sessions cleanup --dry-run", "Preview stale/cap cleanup."],
+          ["enclaws sessions cleanup --dry-run", "Preview stale/cap cleanup."],
           [
-            "openclaw sessions cleanup --dry-run --fix-missing",
+            "enclaws sessions cleanup --dry-run --fix-missing",
             "Also preview pruning entries with missing transcript files.",
           ],
-          ["openclaw sessions cleanup --enforce", "Apply maintenance now."],
-          ["openclaw sessions cleanup --agent work --dry-run", "Preview one agent store."],
-          ["openclaw sessions cleanup --all-agents --dry-run", "Preview all agent stores."],
+          ["enclaws sessions cleanup --enforce", "Apply maintenance now."],
+          ["enclaws sessions cleanup --agent work --dry-run", "Preview one agent store."],
+          ["enclaws sessions cleanup --all-agents --dry-run", "Preview all agent stores."],
           [
-            "openclaw sessions cleanup --enforce --store ./tmp/sessions.json",
+            "enclaws sessions cleanup --enforce --store ./tmp/sessions.json",
             "Use a specific store.",
           ],
         ])}`,

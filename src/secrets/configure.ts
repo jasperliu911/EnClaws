@@ -846,7 +846,7 @@ export async function runSecretsConfigureInteractive(
     version: 1,
     protocolVersion: 1,
     generatedAt: new Date().toISOString(),
-    generatedBy: "openclaw secrets configure",
+    generatedBy: "enclaws secrets configure",
     targets: [...selectedByPath.values()].map((entry) => ({
       type: entry.type,
       path: entry.path,

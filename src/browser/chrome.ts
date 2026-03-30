@@ -309,7 +309,7 @@ export async function launchOpenClawChrome(
 
   const pid = proc.pid ?? -1;
   log.info(
-    `🦞 openclaw browser started (${exe.kind}) profile "${profile.name}" on 127.0.0.1:${profile.cdpPort} (pid ${pid})`,
+    `🦞 enclaws browser started (${exe.kind}) profile "${profile.name}" on 127.0.0.1:${profile.cdpPort} (pid ${pid})`,
   );
 
   return {

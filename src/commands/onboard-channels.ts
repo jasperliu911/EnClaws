@@ -194,10 +194,10 @@ async function noteChannelPrimer(
   await prompter.note(
     [
       "私聊安全机制 (DM security): 默认开启配对(pairing)模式; 未知私聊将收到配对码。",
-      `批准配对命令: ${formatCliCommand("openclaw pairing approve <channel> <code>")}`,
+      `批准配对命令: ${formatCliCommand("enclaws pairing approve <channel> <code>")}`,
       '完全公开私聊需设置 dmPolicy="open" + allowFrom=["*"]。',
       "多用户私聊(群组功能): 运行: " +
-        formatCliCommand('openclaw config set session.dmScope "per-channel-peer"') +
+        formatCliCommand('enclaws config set session.dmScope "per-channel-peer"') +
         ' (或者 "per-account-channel-peer" 处理多账号) 来将对话上下文隔离。',
       `文档参考: ${formatDocsLink("/start/pairing", "start/pairing")}`,
       "",
@@ -249,11 +249,11 @@ async function maybeConfigureDmPolicies(params: {
     await prompter.note(
       [
         "Default: pairing (unknown DMs get a pairing code).",
-        `Approve: ${formatCliCommand(`openclaw pairing approve ${policy.channel} <code>`)}`,
+        `Approve: ${formatCliCommand(`enclaws pairing approve ${policy.channel} <code>`)}`,
         `Allowlist DMs: ${policy.policyKey}="allowlist" + ${policy.allowFromKey} entries.`,
         `Public DMs: ${policy.policyKey}="open" + ${policy.allowFromKey} includes "*".`,
         "Multi-user DMs: run: " +
-          formatCliCommand('openclaw config set session.dmScope "per-channel-peer"') +
+          formatCliCommand('enclaws config set session.dmScope "per-channel-peer"') +
           ' (or "per-account-channel-peer" for multi-account channels) to isolate sessions.',
         `Docs: ${formatDocsLink("/channels/pairing", "channels/pairing")}`,
       ].join("\n"),
@@ -476,8 +476,8 @@ export async function setupChannels(
       if (adapter) {
         await prompter.note(
           `${channel} plugin not available (continuing with onboarding). If the channel still doesn't work after setup, run \`${formatCliCommand(
-            "openclaw plugins list",
-          )}\` and \`${formatCliCommand("openclaw plugins enable " + channel)}\`, then restart the gateway.`,
+            "enclaws plugins list",
+          )}\` and \`${formatCliCommand("enclaws plugins enable " + channel)}\`, then restart the gateway.`,
           "Channel setup",
         );
         await refreshStatus(channel);
@@ -686,7 +686,7 @@ export async function setupChannels(
         {
           value: "__skip__",
           label: "暂时跳过 (Skip for now)",
-          hint: `稍后可通过 \`${formatCliCommand("openclaw channels add")}\` 继续添加`,
+          hint: `稍后可通过 \`${formatCliCommand("enclaws channels add")}\` 继续添加`,
         },
       ],
       initialValue: quickstartDefault,

@@ -50,8 +50,8 @@ async function requireRiskAcknowledgement(params: {
       "- 任何带有工具或暴露给不受信任来源的机器人，应使用最强力的模型 (如 Qwen-Max / GPT-4 等)。",
       "",
       "请定期运行以核查安全状态：",
-      "openclaw security audit --deep",
-      "openclaw security audit --fix",
+      "enclaws security audit --deep",
+      "enclaws security audit --fix",
       "",
       "必读指南: https://docs.openclaw.ai/gateway/security",
     ].join("\n"),
@@ -96,13 +96,13 @@ export async function runOnboardingWizard(
       );
     }
     await prompter.outro(
-      `配置无效。请运行 \`${formatCliCommand("openclaw doctor")}\` 修复，然后再重新运行 onboarding。`,
+      `配置无效。请运行 \`${formatCliCommand("enclaws doctor")}\` 修复，然后再重新运行 onboarding。`,
     );
     runtime.exit(1);
     return;
   }
 
-  const quickstartHint = `稍后可以通过 ${formatCliCommand("openclaw configure")} 配置详情。`;
+  const quickstartHint = `稍后可以通过 ${formatCliCommand("enclaws configure")} 配置详情。`;
   const manualHint = "手动配置端口、网络、Tailscale 以及相关鉴权选项。";
   const explicitFlowRaw = opts.flow?.trim();
   const normalizedExplicitFlow = explicitFlowRaw === "manual" ? "advanced" : explicitFlowRaw;
