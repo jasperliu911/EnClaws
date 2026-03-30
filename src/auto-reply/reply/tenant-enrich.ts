@@ -83,9 +83,17 @@ export async function enrichTenantContext(
 
   // Read tenantId from the account-scoped channel config.
   // In multi-tenant mode, server-channels.ts merges DB tenant data into the
-  // account config: cfg.channels[provider].tenantId = "<tenant-uuid>"
+  // account config: cfg.channels[provider].accounts[accountId].tenantId = "<tenant-uuid>"
   const channelCfg = (cfg.channels as Record<string, Record<string, unknown> | undefined>)?.[provider];
-  const tenantId = channelCfg?.tenantId as string | undefined;
+  let tenantId = channelCfg?.tenantId as string | undefined;
+  // Fall back to the per-account tenantId when the channel top-level doesn't carry one.
+  if (!tenantId) {
+    const accountId = (ctx as Record<string, unknown>).AccountId as string | undefined;
+    if (accountId) {
+      const accounts = channelCfg?.accounts as Record<string, Record<string, unknown> | undefined> | undefined;
+      tenantId = accounts?.[accountId]?.tenantId as string | undefined;
+    }
+  }
   if (!tenantId) return;
 
   const senderId = ctx.SenderId;
