@@ -48,6 +48,7 @@ export async function recordUsage(params: {
     );
   } catch (err) {
     console.error("[usage] Failed to record usage:", err);
+    throw err;
   }
 }
 

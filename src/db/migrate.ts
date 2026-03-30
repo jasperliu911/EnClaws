@@ -75,7 +75,7 @@ async function runMigrations(): Promise<void> {
     // Filter out PG-specific migrations (those with PG syntax that won't run on SQLite)
     // 006_user_open_ids_array.sql uses PG array types — skip, already in schema.sql
     // 002_user_channel_id.sql uses PG ALTER TABLE syntax — handled inline below
-    const pgOnlyMigrations = new Set(["006_user_open_ids_array.sql", "002_user_channel_id.sql"]);
+    const pgOnlyMigrations = new Set(["006_user_open_ids_array.sql", "002_user_channel_id.sql", "004_usage_user_id_text.sql"]);
     for (const migration of pgOnlyMigrations) {
       if (!applied.has(migration) && pending.includes(migration)) {
         sqliteQuery("INSERT OR IGNORE INTO _migrations (name) VALUES (?)", [migration]);

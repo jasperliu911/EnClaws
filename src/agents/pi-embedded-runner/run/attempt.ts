@@ -8,6 +8,8 @@ import {
   SessionManager,
 } from "@mariozechner/pi-coding-agent";
 import { resolveHeartbeatPrompt } from "../../../auto-reply/heartbeat.js";
+import { isDbInitialized } from "../../../db/index.js";
+import { recordUsage } from "../../../db/models/usage.js";
 import { resolveChannelCapabilities } from "../../../config/channel-capabilities.js";
 import type { OpenClawConfig } from "../../../config/config.js";
 import { getMachineDisplayName } from "../../../infra/machine-name.js";
@@ -1654,6 +1656,26 @@ export async function runEmbeddedAttempt(
           });
       }
 
+      const attemptUsage = getUsageTotals();
+
+      // Record token usage to DB (multi-tenant mode only, fire-and-forget)
+      if (params.tenantId && attemptUsage && isDbInitialized()) {
+        recordUsage({
+          tenantId: params.tenantId,
+          userId: params.tenantUserId,
+          agentId: sessionAgentId,
+          provider: params.provider,
+          model: params.modelId,
+          inputTokens: attemptUsage.input ?? 0,
+          outputTokens: attemptUsage.output ?? 0,
+          cacheReadTokens: attemptUsage.cacheRead ?? 0,
+          cacheWriteTokens: attemptUsage.cacheWrite ?? 0,
+          sessionKey: params.sessionKey,
+        }).catch((err) => {
+          log.warn(`Failed to record usage: ${String(err)}`);
+        });
+      }
+
       return {
         aborted,
         timedOut,
@@ -1674,7 +1696,7 @@ export async function runEmbeddedAttempt(
         cloudCodeAssistFormatError: Boolean(
           lastAssistant?.errorMessage && isCloudCodeAssistFormatError(lastAssistant.errorMessage),
         ),
-        attemptUsage: getUsageTotals(),
+        attemptUsage,
         compactionCount: getCompactionCount(),
         // Client tool call detected (OpenResponses hosted tools)
         clientToolCall: clientToolCallDetected ?? undefined,
