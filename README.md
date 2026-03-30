@@ -264,7 +264,7 @@ Stay close to releases, operator feedback, and product discussion:
 
 <p align="center">
   <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=1b6r1c67-a833-4d36-b748-5e6729d65045">
-    <img src="./docs/assets/community-feishu-qr.jpg" alt="Feishu QR code for joining the EnClaws group" width="280" />
+    <img src="docs/assets/community-feishu-qr.jpg" alt="Feishu QR code for joining the EnClaws group" width="280" />
   </a>
   <a href="https://discord.gg/p4Kp5jKAsZ">
     <img src="./docs/assets/community-discord-qr.jpg" alt="Discord QR code for joining the EnClaws server" width="280" />

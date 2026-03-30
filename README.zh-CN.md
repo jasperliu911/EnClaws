@@ -1,7 +1,7 @@
 # EnClaws — 企业级 AI 助手容器平台
 
 <p align="center">
-  <img src="./docs/assets/banner-enclaws-placeholder.svg" alt="EnClaws 横幅占位图" width="100%" />
+  <img src="./docs/assets/banner-enclaws-placeholder.png" alt="EnClaws banner placeholder" width="100%" />
 </p>
 
 <p align="center">
@@ -75,7 +75,7 @@ docker-compose up -d
 > 当前公开文档仅覆盖上述最小化启动命令，以及存在一个 Web 管理面板这一点。更多设置细节会在后续文档发布时补充。
 
 <p align="center">
-  <img src="./docs/assets/dashboard-enclaws-placeholder.svg" alt="EnClaws 控制台占位图" width="92%" />
+  <img src="./docs/assets/dashboard-enclaws-placeholder.jpg" alt="EnClaws dashboard placeholder" width="92%" />
 </p>
 
 ## 核心亮点
