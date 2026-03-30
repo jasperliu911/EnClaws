@@ -344,8 +344,9 @@ export class LarkClient {
     handlers: Record<string, (data: unknown) => Promise<void>>;
     abortSignal?: AbortSignal;
     autoProbe?: boolean;
+    onConnectionChange?: (connected: boolean) => void;
   }): Promise<void> {
-    const { handlers, abortSignal, autoProbe = true } = opts;
+    const { handlers, abortSignal, autoProbe = true, onConnectionChange } = opts;
 
     if (autoProbe) await this.probe();
 
@@ -368,11 +369,29 @@ export class LarkClient {
       this._wsClient = null;
     }
 
+    const wsLogger = onConnectionChange
+      ? {
+          info: (...args: unknown[]) => {
+            const msg = args.map(String).join(' ');
+            if (msg.includes('[ws] ws client ready')) onConnectionChange(true);
+            log.info(msg);
+          },
+          error: (...args: unknown[]) => {
+            const msg = args.map(String).join(' ');
+            if (msg.includes('[ws] connect failed')) onConnectionChange(false);
+            log.error(msg);
+          },
+          warn: (...args: unknown[]) => log.warn(args.map(String).join(' ')),
+          debug: (...args: unknown[]) => log.debug(args.map(String).join(' ')),
+        }
+      : undefined;
+
     this._wsClient = new Lark.WSClient({
       appId,
       appSecret,
       domain: resolveBrand(this.account.brand),
       loggerLevel: Lark.LoggerLevel.info,
+      ...(wsLogger ? { logger: wsLogger } : {}),
     });
 
     // SDK 的 handleEventData 只处理 type="event"，card action 回调是 type="card" 会被丢弃。

@@ -318,15 +318,28 @@ export const feishuPlugin: ChannelPlugin<LarkAccount> = {
   gateway: {
     startAccount: async (ctx) => {
       const { monitorFeishuProvider } = await import('./monitor.js');
+      const { LarkClient: LC } = await import('../core/lark-client.js');
       const account = getLarkAccount(ctx.cfg, ctx.accountId);
       const port = account.config?.webhookPort ?? null;
-      ctx.setStatus({ accountId: ctx.accountId, port });
+
+      // Pre-startup probe — fail fast if credentials are invalid
+      const lark = LC.fromAccount(account);
+      const probeResult = await lark.probe();
+      if (!probeResult.ok) {
+        ctx.setStatus({ accountId: ctx.accountId, port, connected: false, lastError: probeResult.error });
+        throw new Error(`Feishu probe failed for ${ctx.accountId}: ${probeResult.error}`);
+      }
+      ctx.setStatus({ accountId: ctx.accountId, port, connected: true });
+
       ctx.log?.info(`starting feishu[${ctx.accountId}] (mode: ${account.config?.connectionMode ?? 'websocket'})`);
       return monitorFeishuProvider({
         config: ctx.cfg,
         runtime: ctx.runtime,
         abortSignal: ctx.abortSignal,
         accountId: ctx.accountId,
+        onConnectionChange: (connected) => {
+          ctx.setStatus({ accountId: ctx.accountId, port, connected });
+        },
       });
     },
 
