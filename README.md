@@ -1,7 +1,7 @@
 # EnClaws — Enterprise AI Assistant Container Platform
 
 <p align="center">
-  <img src="./docs/assets/banner-enclaws-placeholder.png" alt="EnClaws banner placeholder" width="100%" />
+  <img src="https://raw.githubusercontent.com/hashSTACS-Global/EnClaws/main/docs/assets/banner-enclaws-placeholder.png" alt="EnClaws banner placeholder" width="100%" />
 </p>
 
 <p align="center">
@@ -107,7 +107,7 @@ enclaws gateway
 After startup, the Gateway is available at `http://localhost:18789`.
 
 <p align="center">
-  <img src="./docs/assets/dashboard-enclaws-placeholder.jpg" alt="EnClaws dashboard placeholder" width="92%" />
+  <img src="https://raw.githubusercontent.com/hashSTACS-Global/EnClaws/main/docs/assets/dashboard-enclaws-placeholder.jpg" alt="EnClaws dashboard placeholder" width="92%" />
 </p>
 
 ## Highlights
@@ -292,10 +292,10 @@ Stay close to releases, operator feedback, and product discussion:
 
 <p align="center">
   <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=2der9793-7a5d-452c-b575-1a1f6bbe540f">
-    <img src="docs/assets/community-feishu-qr.jpg" alt="Feishu QR code for joining the EnClaws group" width="280" />
+    <img src="https://raw.githubusercontent.com/hashSTACS-Global/EnClaws/main/docs/assets/community-feishu-qr.jpg" alt="Feishu QR code for joining the EnClaws group" width="280" />
   </a>
   <a href="https://discord.gg/ExT4MEnK4w">
-    <img src="./docs/assets/community-discord-qr.jpg" alt="Discord QR code for joining the EnClaws server" width="280" />
+    <img src="https://raw.githubusercontent.com/hashSTACS-Global/EnClaws/main/docs/assets/community-discord-qr.jpg" alt="Discord QR code for joining the EnClaws server" width="280" />
   </a>
 </p>
 

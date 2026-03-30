@@ -1,7 +1,7 @@
 # EnClaws — 企业级 AI 助手容器平台
 
 <p align="center">
-  <img src="./docs/assets/banner-enclaws-placeholder.png" alt="EnClaws banner placeholder" width="100%" />
+  <img src="https://raw.githubusercontent.com/hashSTACS-Global/EnClaws/main/docs/assets/banner-enclaws-placeholder.png" alt="EnClaws banner placeholder" width="100%" />
 </p>
 
 <p align="center">
@@ -103,7 +103,7 @@ enclaws gateway
 启动完成后，Gateway 默认可通过 `http://localhost:18789` 访问。
 
 <p align="center">
-  <img src="./docs/assets/dashboard-enclaws-placeholder.jpg" alt="EnClaws dashboard placeholder" width="92%" />
+  <img src="https://raw.githubusercontent.com/hashSTACS-Global/EnClaws/main/docs/assets/dashboard-enclaws-placeholder.jpg" alt="EnClaws dashboard placeholder" width="92%" />
 </p>
 
 ## 核心亮点
@@ -288,10 +288,10 @@ EnClaws 站在开源巨人的肩膀上。我们在此诚挚感谢：
 
 <p align="center">
   <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=2der9793-7a5d-452c-b575-1a1f6bbe540f">
-    <img src="./docs/assets/community-feishu-qr.jpg" alt="加入 EnClaws 飞书群二维码" width="280" />
+    <img src="https://raw.githubusercontent.com/hashSTACS-Global/EnClaws/main/docs/assets/community-feishu-qr.jpg" alt="加入 EnClaws 飞书群二维码" width="280" />
   </a>
   <a href="https://discord.gg/ExT4MEnK4w">
-    <img src="./docs/assets/community-discord-qr.jpg" alt="加入 EnClaws Discord 社区二维码" width="280" />
+    <img src="https://raw.githubusercontent.com/hashSTACS-Global/EnClaws/main/docs/assets/community-discord-qr.jpg" alt="加入 EnClaws Discord 社区二维码" width="280" />
   </a>
 </p>
 
