@@ -81,6 +81,8 @@ type ReadSessionUpdatedAt = typeof import("../../config/sessions.js").readSessio
 type UpdateLastRoute = typeof import("../../config/sessions.js").updateLastRoute;
 type ResolveTenantSessionStorePath =
   typeof import("../../config/sessions/tenant-paths.js").resolveTenantSessionStorePath;
+type ResolveTenantUserDir =
+  typeof import("../../config/sessions/tenant-paths.js").resolveTenantUserDir;
 type EnsureTenantSessionDirs =
   typeof import("../../config/sessions/tenant-paths.js").ensureTenantSessionDirs;
 type LoadConfig = typeof import("../../config/config.js").loadConfig;
@@ -265,6 +267,7 @@ export type PluginRuntime = {
     session: {
       resolveStorePath: ResolveStorePath;
       resolveTenantSessionStorePath: ResolveTenantSessionStorePath;
+      resolveTenantUserDir: ResolveTenantUserDir;
       ensureTenantSessionDirs: EnsureTenantSessionDirs;
       readSessionUpdatedAt: ReadSessionUpdatedAt;
       recordSessionMetaFromInbound: RecordSessionMetaFromInbound;

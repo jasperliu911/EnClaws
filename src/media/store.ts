@@ -10,7 +10,22 @@ import { resolvePinnedHostname } from "../infra/net/ssrf.js";
 import { resolveConfigDir } from "../utils.js";
 import { detectMime, extensionForMime } from "./mime.js";
 
-const resolveMediaDir = () => path.join(resolveConfigDir(), "media");
+const resolveMediaDir = () => {
+  const override = getCurrentTenantMediaDir();
+  if (override) return override;
+  return path.join(resolveConfigDir(), "media");
+};
+
+// Multi-tenant media dir override.
+// Set before media downloads in tenant-scoped request handling,
+// cleared after the request completes.
+let _tenantMediaDir: string | undefined;
+export function setCurrentTenantMediaDir(dir: string | undefined): void {
+  _tenantMediaDir = dir;
+}
+export function getCurrentTenantMediaDir(): string | undefined {
+  return _tenantMediaDir;
+}
 export const MEDIA_MAX_BYTES = 5 * 1024 * 1024; // 5MB default
 const MAX_BYTES = MEDIA_MAX_BYTES;
 const DEFAULT_TTL_MS = 2 * 60 * 1000; // 2 minutes
@@ -300,11 +315,12 @@ export async function saveMediaBuffer(
   subdir = "inbound",
   maxBytes = MAX_BYTES,
   originalFilename?: string,
+  baseDir?: string,
 ): Promise<SavedMedia> {
   if (buffer.byteLength > maxBytes) {
     throw new Error(`Media exceeds ${(maxBytes / (1024 * 1024)).toFixed(0)}MB limit`);
   }
-  const dir = path.join(resolveMediaDir(), subdir);
+  const dir = path.join(baseDir ?? resolveMediaDir(), subdir);
   await fs.mkdir(dir, { recursive: true, mode: 0o700 });
   const uuid = crypto.randomUUID();
   const headerExt = extensionForMime(contentType?.split(";")[0]?.trim() ?? undefined);

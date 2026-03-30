@@ -60,6 +60,7 @@ import {
 } from "../../config/sessions.js";
 import {
   resolveTenantSessionStorePath,
+  resolveTenantUserDir,
   ensureTenantSessionDirs,
 } from "../../config/sessions/tenant-paths.js";
 import { auditDiscordChannelPermissions } from "../../discord/audit.js";
@@ -356,6 +357,7 @@ function createRuntimeChannel(): PluginRuntime["channel"] {
     session: {
       resolveStorePath,
       resolveTenantSessionStorePath,
+      resolveTenantUserDir,
       ensureTenantSessionDirs,
       readSessionUpdatedAt,
       recordSessionMetaFromInbound,
