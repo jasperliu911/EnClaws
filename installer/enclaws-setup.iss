@@ -48,7 +48,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 ; Portable Node.js runtime
 Source: "node-portable\*"; DestDir: "{app}\node"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-; EnClaws application (dist, extensions, skills, assets, node_modules, etc.)
+; EnClaws application (dist, extensions, skills, assets, docs/reference/templates, node_modules, etc.)
 Source: "app-bundle\*"; DestDir: "{app}\app"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; CLI wrapper script (this is what gets added to PATH)

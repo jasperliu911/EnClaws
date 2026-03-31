@@ -169,6 +169,18 @@ foreach ($d in $dirsToCopy) {
     }
 }
 
+# Workspace bootstrap templates (runtime reads docs/reference/templates via resolveWorkspaceTemplateDir).
+# Not included in dist/; npm publish includes docs/, but the Windows bundle must copy them explicitly.
+$templatesSrc = Join-Path $ProjectRoot "docs\reference\templates"
+$templatesDest = Join-Path $AppBundleDir "docs\reference\templates"
+if (Test-Path $templatesSrc) {
+    New-Item -ItemType Directory -Force -Path (Split-Path $templatesDest -Parent) | Out-Null
+    Copy-Item $templatesSrc $templatesDest -Recurse -Force
+    Write-Host "    Copied docs/reference/templates/" -ForegroundColor Gray
+} else {
+    Write-Host "[!] Missing directory: docs/reference/templates/ (agent bootstrap will fail)" -ForegroundColor Yellow
+}
+
 # Generate a trimmed package.json for production install
 Write-Host "[*] Generating production package.json..." -ForegroundColor Yellow
 $prodPkg = [ordered]@{
