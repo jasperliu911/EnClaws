@@ -649,6 +649,7 @@ export const de: TranslationMap = {
     response: "Response",
     error: "Error",
     none: "(keine)",
+    friendlyView: "Ansicht",
   },
   tenantSettings: {
     title: "Unternehmenseinstellungen",
