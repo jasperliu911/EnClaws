@@ -977,6 +977,7 @@ export const zh_CN: TranslationMap = {
     response: "Response",
     error: "Error",
     none: "(无)",
+    friendlyView: "友好视图",
   },
   tenantSettings: {
     title: "企业设置",

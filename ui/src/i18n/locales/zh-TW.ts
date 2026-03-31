@@ -645,6 +645,7 @@ export const zh_TW: TranslationMap = {
     response: "Response",
     error: "Error",
     none: "(無)",
+    friendlyView: "友好視圖",
   },
   tenantSettings: {
     title: "企業設定",

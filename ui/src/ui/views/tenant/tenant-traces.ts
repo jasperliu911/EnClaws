@@ -111,6 +111,23 @@ export class TenantTracesView extends LitElement {
     .badge-tokens { background: #1a2e1a; color: #86efac; }
     .badge-time { background: #2d2006; color: #fcd34d; }
     .badge-error { background: #3b1111; color: #fca5a5; }
+    .badge-platform { background: #2d1b4e; color: #c4b5fd; }
+    .badge-user { background: #1e3a5f; color: #93c5fd; }
+
+    .turn-user-line {
+      display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;
+    }
+    .turn-user-name { font-weight: 600; font-size: 0.85rem; }
+    .turn-content {
+      font-size: 0.88rem; color: var(--text, #e5e5e5);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .turn-content.empty { color: var(--text-muted, #525252); font-style: italic; }
+    .turn-session-id {
+      font-size: 0.7rem; color: var(--text-muted, #525252);
+      font-family: var(--font-mono, monospace); max-width: 180px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
 
     /* Interaction detail (expanded turn) */
     .interactions { margin-top: 0.75rem; border-top: 1px solid var(--border, #262626); padding-top: 0.75rem; }
@@ -151,6 +168,49 @@ export class TenantTracesView extends LitElement {
     .stop-reason.end_turn { background: #1a2e1a; color: #86efac; }
     .stop-reason.error { background: #3b1111; color: #fca5a5; }
 
+    /* Chat-style message bubbles */
+    .chat-timeline { margin-top: 0.35rem; display: flex; flex-direction: column; gap: 0.4rem; max-height: 500px; overflow-y: auto; }
+    .chat-msg { padding: 0.5rem 0.75rem; border-radius: var(--radius-md, 6px); font-size: 0.8rem; line-height: 1.5; max-width: 85%; }
+    .chat-msg.user { background: #1e3a5f; color: #e0f2fe; align-self: flex-end; border-bottom-right-radius: 2px; }
+    .chat-msg.assistant { background: #1a2e1a; color: #dcfce7; align-self: flex-start; border-bottom-left-radius: 2px; }
+    .chat-msg.system { background: #2d2006; color: #fef3c7; align-self: center; font-size: 0.75rem; max-width: 95%; }
+    .chat-msg.tool { background: #1e1e2e; color: #c4b5fd; align-self: flex-start; font-size: 0.75rem; }
+    .chat-role { font-size: 0.65rem; font-weight: 600; opacity: 0.7; margin-bottom: 0.15rem; text-transform: uppercase; }
+    .chat-text { white-space: pre-wrap; word-break: break-word; }
+    .tool-call-inline { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.4rem; background: rgba(99,102,241,0.15); border-radius: 4px; font-size: 0.7rem; color: #a5b4fc; margin: 0.15rem 0; }
+
+    /* Tool list (friendly view) */
+    .tool-list { margin-top: 0.35rem; display: flex; flex-direction: column; gap: 0.25rem; max-height: 300px; overflow-y: auto; }
+    .tool-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.6rem; background: var(--bg, #0d0d0d); border: 1px solid var(--border, #262626); border-radius: var(--radius-md, 6px); font-size: 0.78rem; }
+    .tool-name { font-weight: 600; color: #a5b4fc; }
+    .tool-desc { color: var(--text-secondary, #a3a3a3); font-size: 0.72rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Response friendly view */
+    .response-text { margin-top: 0.35rem; padding: 0.75rem; background: var(--bg, #0d0d0d); border: 1px solid var(--border, #262626); border-radius: var(--radius-md, 6px); font-size: 0.8rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; max-height: 400px; overflow-y: auto; }
+
+    /* Section footer with raw JSON toggle */
+    .section-footer { display: flex; justify-content: flex-end; margin-top: 0.25rem; }
+    .raw-toggle { background: none; border: none; color: var(--text-muted, #525252); font-size: 0.68rem; cursor: pointer; padding: 0.15rem 0; }
+    .raw-toggle:hover { color: var(--text-secondary, #a3a3a3); }
+
+    /* History context collapse */
+    .history-toggle {
+      display: flex; align-items: center; gap: 0.4rem; width: 100%;
+      background: none; border: none; border-top: 1px dashed var(--border, #262626);
+      border-bottom: 1px dashed var(--border, #262626);
+      color: var(--text-muted, #525252); font-size: 0.72rem; cursor: pointer;
+      padding: 0.3rem 0; margin: 0.2rem 0; text-align: left;
+    }
+    .history-toggle:hover { color: var(--text-secondary, #a3a3a3); }
+    .history-msgs { display: flex; flex-direction: column; gap: 0.4rem; opacity: 0.55; }
+    .history-msgs .chat-msg { border-style: dashed; }
+    .history-label {
+      font-size: 0.65rem; color: var(--text-muted, #525252);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 0.1rem 0.35rem; border: 1px dashed var(--border, #333);
+      border-radius: 3px; align-self: center; margin: 0.1rem 0;
+    }
+
     /* Pagination */
     .pagination {
       display: flex; justify-content: center; align-items: center; gap: 0.75rem;
@@ -180,6 +240,10 @@ export class TenantTracesView extends LitElement {
 
   // Active section per interaction: only one visible at a time per trace
   @state() private activeSection = new Map<string, string>();
+  // Track which sections are showing raw JSON
+  @state() private rawJsonSections = new Set<string>();
+  // Track which interactions have history expanded
+  @state() private expandedHistory = new Set<string>();
 
   private showError(key: string) {
     this.errorKey = key;
@@ -230,6 +294,7 @@ export class TenantTracesView extends LitElement {
     this.expandedTurnId = turnId;
     this.expandedLoading = true;
     this.activeSection = new Map();
+    this.expandedHistory = new Set();
     try {
       const result = (await this.rpc("tenant.traces.turn", { turnId })) as {
         turnId: string;
@@ -296,23 +361,117 @@ export class TenantTracesView extends LitElement {
     return text.length > max ? text.slice(0, max) + "..." : text;
   }
 
+  /**
+   * Parse platform system message prefix.
+   * Format: "System: [timestamp GMT+8] Platform[app_id] group group_id | UserName (user_id)\nActual content..."
+   * Returns { platform, userName, userId, content } or null if not matching.
+   */
+  private parsePlatformMessage(raw: string | null): {
+    platform: string; userName: string; userId: string; content: string;
+  } | null {
+    if (!raw) return null;
+    // Match: System: [date GMT+8] PlatformName[...] ... | UserName (uid...)
+    const m = raw.match(
+      /^System:\s*\[.*?\]\s*([A-Za-z][A-Za-z0-9_-]*)\[.*?\].*?\|\s*(.+?)\s*\(([\w_-]+)\.{0,3}\)/
+    );
+    if (!m) return null;
+    const platform = m[1];
+    const userName = m[2].trim();
+    const userId = m[3];
+    // Content after the header line
+    const nlIdx = raw.indexOf("\n");
+    let rest = nlIdx >= 0 ? raw.slice(nlIdx + 1).trim() : "";
+    // Strip any "(untrusted metadata): ```...```" blocks (Conversation info, Sender, etc.)
+    rest = rest.replace(/^[^\n]*\(untrusted metadata\)[^\n]*\n?```[\s\S]*?```\s*/gim, "").trim();
+    // Also strip bare single-line "(untrusted metadata)" lines without code fence
+    rest = rest.replace(/^[^\n]*\(untrusted metadata\)[^\n]*\n?/gim, "").trim();
+    return { platform, userName, userId, content: rest };
+  }
+
+  private isRawJson(traceId: string, section: string): boolean {
+    return this.rawJsonSections.has(`${traceId}:${section}`);
+  }
+
+  private toggleRawJson(traceId: string, section: string) {
+    const key = `${traceId}:${section}`;
+    const next = new Set(this.rawJsonSections);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    this.rawJsonSections = next;
+  }
+
+  /** Extract readable text from a message content field (string or content blocks array). */
+  private extractContentText(content: unknown): string {
+    if (typeof content === "string") return content;
+    if (!Array.isArray(content)) return "";
+    const parts: string[] = [];
+    for (const block of content) {
+      if (typeof block === "string") { parts.push(block); continue; }
+      if (!block || typeof block !== "object") continue;
+      const b = block as Record<string, unknown>;
+      if (b.type === "text" && typeof b.text === "string") { parts.push(b.text); }
+      else if (b.type === "tool_use") { parts.push(`[Tool: ${b.name ?? "unknown"}]`); }
+      else if (b.type === "tool_result") {
+        const resultText = this.extractContentText(b.content);
+        parts.push(resultText ? `[Tool Result] ${resultText.slice(0, 200)}` : "[Tool Result]");
+      }
+      else if (b.type === "image" || b.type === "image_url") { parts.push("[Image]"); }
+    }
+    return parts.join("\n");
+  }
+
+  /** Extract the tool name list from the tools definition array. */
+  private extractToolNames(tools: unknown[]): Array<{ name: string; desc: string }> {
+    const result: Array<{ name: string; desc: string }> = [];
+    for (const tool of tools) {
+      if (!tool || typeof tool !== "object") continue;
+      const t = tool as Record<string, unknown>;
+      // Anthropic format: { name, description, ... }
+      if (typeof t.name === "string") {
+        result.push({ name: t.name, desc: typeof t.description === "string" ? t.description : "" });
+        continue;
+      }
+      // OpenAI format: { type: "function", function: { name, description } }
+      if (t.type === "function" && t.function && typeof t.function === "object") {
+        const fn = t.function as Record<string, unknown>;
+        if (typeof fn.name === "string") {
+          result.push({ name: fn.name, desc: typeof fn.description === "string" ? fn.description : "" });
+        }
+      }
+    }
+    return result;
+  }
+
   private renderTurnCard(turn: TurnSummary) {
     const isExpanded = this.expandedTurnId === turn.turnId;
     const totalTokens = turn.totalInputTokens + turn.totalOutputTokens;
+    const parsed = this.parsePlatformMessage(turn.userInput);
+
+    const mainContent = parsed
+      ? html`
+          <div class="turn-user-line">
+            <span class="badge badge-platform">${parsed.platform}</span>
+            <span class="turn-user-name">${parsed.userName}</span>
+          </div>
+          <div class="turn-content ${parsed.content ? "" : "empty"}">
+            ${parsed.content ? this.truncate(parsed.content, 120) : this.truncate(turn.userInput, 120)}
+          </div>`
+      : html`<div class="turn-content ${turn.userInput ? "" : "empty"}">${this.truncate(turn.userInput, 120)}</div>`;
+
     return html`
       <div class="turn-card ${isExpanded ? "expanded" : ""}" @click=${() => this.toggleTurn(turn.turnId)}>
         <div class="turn-header">
           <div style="flex:1;min-width:0">
-            <div class="turn-input">${this.truncate(turn.userInput, 120)}</div>
+            ${mainContent}
             <div class="turn-meta">
               <span>${this.formatTime(turn.createdAt)}</span>
               ${turn.agentId ? html`<span>Agent: ${turn.agentId}</span>` : nothing}
               ${turn.model ? html`<span>${turn.provider ? turn.provider + "/" : ""}${turn.model}</span>` : nothing}
+              ${turn.sessionKey ? html`<span class="turn-session-id" title=${turn.sessionKey}>${turn.sessionKey.slice(0, 12)}…</span>` : nothing}
             </div>
           </div>
-          <div style="display:flex;gap:0.35rem;flex-shrink:0">
+          <div style="display:flex;gap:0.35rem;flex-shrink:0;align-items:flex-start">
             <span class="badge badge-rounds">${t("tenantTraces.rounds", { count: String(turn.interactionCount) })}</span>
-            <span class="badge badge-tokens">${this.formatTokens(totalTokens)} tokens</span>
+            <span class="badge badge-tokens">${this.formatTokens(totalTokens)} tok</span>
             <span class="badge badge-time">${this.formatDuration(turn.totalDurationMs)}</span>
           </div>
         </div>
@@ -331,12 +490,16 @@ export class TenantTracesView extends LitElement {
     }
     return html`
       <div class="interactions" @click=${(e: Event) => e.stopPropagation()}>
-        ${this.expandedTraces.map((trace) => this.renderInteraction(trace))}
+        ${this.expandedTraces.map((trace, i) => {
+          const prevCount = i > 0 && Array.isArray(this.expandedTraces[i - 1].messages)
+            ? this.expandedTraces[i - 1].messages.length : 0;
+          return this.renderInteraction(trace, prevCount);
+        })}
       </div>
     `;
   }
 
-  private renderInteraction(trace: InteractionTrace) {
+  private renderInteraction(trace: InteractionTrace, historyCount = 0) {
     const stopClass = trace.errorMessage ? "error" : trace.stopReason === "tool_use" ? "tool_use" : "end_turn";
     const messagesCount = Array.isArray(trace.messages) ? trace.messages.length : 0;
     const toolsCount = Array.isArray(trace.tools) ? trace.tools.length : 0;
@@ -360,13 +523,13 @@ export class TenantTracesView extends LitElement {
         </div>
 
         <div style="display:flex;flex-wrap:wrap;gap:0.25rem;margin-top:0.25rem">
-          <button class="collapsible-toggle ${this.isSectionVisible(trace.id, "system") ? "active" : ""}"
-            @click=${() => this.toggleSection(trace.id, "system")}>
-            ${t("tenantTraces.systemPrompt")}
-          </button>
           <button class="collapsible-toggle ${this.isSectionVisible(trace.id, "messages") ? "active" : ""}"
             @click=${() => this.toggleSection(trace.id, "messages")}>
             ${t("tenantTraces.messages")} (${messagesCount})
+          </button>
+          <button class="collapsible-toggle ${this.isSectionVisible(trace.id, "response") ? "active" : ""}"
+            @click=${() => this.toggleSection(trace.id, "response")}>
+            ${t("tenantTraces.response")}
           </button>
           ${toolsCount > 0 ? html`
             <button class="collapsible-toggle ${this.isSectionVisible(trace.id, "tools") ? "active" : ""}"
@@ -374,9 +537,9 @@ export class TenantTracesView extends LitElement {
               ${t("tenantTraces.tools")} (${toolsCount})
             </button>
           ` : nothing}
-          <button class="collapsible-toggle ${this.isSectionVisible(trace.id, "response") ? "active" : ""}"
-            @click=${() => this.toggleSection(trace.id, "response")}>
-            ${t("tenantTraces.response")}
+          <button class="collapsible-toggle ${this.isSectionVisible(trace.id, "system") ? "active" : ""}"
+            @click=${() => this.toggleSection(trace.id, "system")}>
+            ${t("tenantTraces.systemPrompt")}
           </button>
           ${trace.errorMessage ? html`
             <button class="collapsible-toggle ${this.isSectionVisible(trace.id, "error") ? "active" : ""}"
@@ -386,23 +549,113 @@ export class TenantTracesView extends LitElement {
           ` : nothing}
         </div>
 
-        ${this.isSectionVisible(trace.id, "system")
-          ? html`<div class="code-block">${trace.systemPrompt ?? t("tenantTraces.none")}</div>`
-          : nothing}
         ${this.isSectionVisible(trace.id, "messages")
-          ? html`<div class="code-block">${this.formatJson(trace.messages)}</div>`
-          : nothing}
-        ${this.isSectionVisible(trace.id, "tools")
-          ? html`<div class="code-block">${this.formatJson(trace.tools)}</div>`
+          ? this.renderMessagesSection(trace.id, trace.messages, historyCount)
           : nothing}
         ${this.isSectionVisible(trace.id, "response")
-          ? html`<div class="code-block">${this.formatJson(trace.response)}</div>`
+          ? this.renderResponseSection(trace.id, trace.response)
+          : nothing}
+        ${this.isSectionVisible(trace.id, "tools")
+          ? this.renderToolsSection(trace.id, trace.tools)
+          : nothing}
+        ${this.isSectionVisible(trace.id, "system")
+          ? html`<div class="code-block">${trace.systemPrompt ?? t("tenantTraces.none")}</div>`
           : nothing}
         ${this.isSectionVisible(trace.id, "error")
           ? html`<div class="code-block" style="color:#fca5a5">${trace.errorMessage}</div>`
           : nothing}
       </div>
     `;
+  }
+
+  /** Render messages as a chat timeline with raw JSON toggle. */
+  private renderMessagesSection(traceId: string, messages: unknown[], historyCount = 0) {
+    if (this.isRawJson(traceId, "messages")) {
+      return html`
+        <div class="code-block">${this.formatJson(messages)}</div>
+        <div class="section-footer">
+          <button class="raw-toggle" @click=${() => this.toggleRawJson(traceId, "messages")}>${t("tenantTraces.friendlyView")}</button>
+        </div>`;
+    }
+
+    const renderMsg = (msg: unknown) => {
+      if (!msg || typeof msg !== "object") return nothing;
+      const m = msg as Record<string, unknown>;
+      const role = (m.role as string) ?? "unknown";
+      const text = this.extractContentText(m.content);
+      const roleClass = role === "user" ? "user" : role === "assistant" ? "assistant" : role === "system" ? "system" : "tool";
+      const roleLabel = role === "user" ? "User" : role === "assistant" ? "AI" : role === "system" ? "System" : "Tool";
+      if (!text && role !== "system") return nothing;
+      return html`
+        <div class="chat-msg ${roleClass}">
+          <div class="chat-role">${roleLabel}</div>
+          <div class="chat-text">${text || t("tenantTraces.none")}</div>
+        </div>`;
+    };
+
+    const histMsgs = historyCount > 0 ? messages.slice(0, historyCount) : [];
+    const newMsgs = historyCount > 0 ? messages.slice(historyCount) : messages;
+    const isHistExpanded = this.expandedHistory.has(traceId);
+
+    return html`
+      <div class="chat-timeline">
+        ${histMsgs.length > 0 ? html`
+          <button class="history-toggle" @click=${() => {
+            const next = new Set(this.expandedHistory);
+            if (next.has(traceId)) next.delete(traceId); else next.add(traceId);
+            this.expandedHistory = next;
+          }}>
+            ${isHistExpanded ? "▾" : "▸"} 历史上下文 (${histMsgs.length} 条)
+          </button>
+          ${isHistExpanded ? html`<div class="history-msgs">${histMsgs.map(renderMsg)}</div>` : nothing}
+          ${newMsgs.length > 0 ? html`<div class="history-label">本轮新增</div>` : nothing}
+        ` : nothing}
+        ${newMsgs.map(renderMsg)}
+      </div>
+      <div class="section-footer">
+        <button class="raw-toggle" @click=${() => this.toggleRawJson(traceId, "messages")}>JSON</button>
+      </div>`;
+  }
+
+  /** Render response as readable text with raw JSON toggle. */
+  private renderResponseSection(traceId: string, response: unknown) {
+    if (this.isRawJson(traceId, "response")) {
+      return html`
+        <div class="code-block">${this.formatJson(response)}</div>
+        <div class="section-footer">
+          <button class="raw-toggle" @click=${() => this.toggleRawJson(traceId, "response")}>${t("tenantTraces.friendlyView")}</button>
+        </div>`;
+    }
+    const text = this.extractContentText(response);
+    return html`
+      <div class="response-text">${text || t("tenantTraces.none")}</div>
+      <div class="section-footer">
+        <button class="raw-toggle" @click=${() => this.toggleRawJson(traceId, "response")}>JSON</button>
+      </div>`;
+  }
+
+  /** Render tools as a name list with raw JSON toggle. */
+  private renderToolsSection(traceId: string, tools: unknown[] | null) {
+    if (!tools || tools.length === 0) return html`<div class="response-text">${t("tenantTraces.none")}</div>`;
+    if (this.isRawJson(traceId, "tools")) {
+      return html`
+        <div class="code-block">${this.formatJson(tools)}</div>
+        <div class="section-footer">
+          <button class="raw-toggle" @click=${() => this.toggleRawJson(traceId, "tools")}>${t("tenantTraces.friendlyView")}</button>
+        </div>`;
+    }
+    const toolNames = this.extractToolNames(tools);
+    return html`
+      <div class="tool-list">
+        ${toolNames.map((tool) => html`
+          <div class="tool-item">
+            <span class="tool-name">${tool.name}</span>
+            ${tool.desc ? html`<span class="tool-desc">${tool.desc}</span>` : nothing}
+          </div>`)}
+      </div>
+      <div class="section-footer">
+        <button class="raw-toggle" @click=${() => this.toggleRawJson(traceId, "tools")}>JSON</button>
+      </div>`;
   }
 
   render() {
