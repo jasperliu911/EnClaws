@@ -11,7 +11,7 @@
 
 import type { GatewayRequestHandlers, GatewayRequestHandlerOptions } from "./types.js";
 import { ErrorCodes, errorShape } from "../protocol/index.js";
-import { createTenant, getTenantBySlug } from "../../db/models/tenant.js";
+import { createTenant, getTenantBySlug, getTenantById } from "../../db/models/tenant.js";
 import { ensureTenantDirFiles } from "../../agents/workspace.js";
 import { resolveTenantDir } from "../../config/sessions/tenant-paths.js";
 import {

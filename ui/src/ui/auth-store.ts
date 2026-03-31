@@ -11,6 +11,20 @@ import { generateUUID } from "./uuid.ts";
 
 const AUTH_KEY = "openclaw.auth.v1";
 
+// ── Shared gateway client for token refresh ──────────────────
+// Set by app-gateway.ts when the main connection is established.
+// Allows refreshAccessToken to reuse the existing WebSocket
+// instead of creating a throwaway connection each time.
+type RpcClient = { request<T>(method: string, params?: unknown): Promise<T> };
+let sharedClient: RpcClient | null = null;
+
+export function setRefreshClient(client: RpcClient | null): void {
+  sharedClient = client;
+}
+
+/** Minimum interval between refresh attempts (throttle). */
+const REFRESH_THROTTLE_MS = 60_000;
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -35,7 +49,6 @@ export interface AuthState {
 }
 
 let currentAuth: AuthState | null = null;
-let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
  * Load auth state from localStorage.
@@ -50,6 +63,8 @@ export function loadAuth(): AuthState | null {
     // Check if expired and no refresh possible
     if (parsed.expiresAt < Date.now() && !parsed.refreshToken) return null;
     currentAuth = parsed;
+    // Ensure activity listener is running (covers page reload scenario)
+    startActivityListener();
     return parsed;
   } catch {
     return null;
@@ -62,7 +77,9 @@ export function loadAuth(): AuthState | null {
 export function saveAuth(auth: AuthState): void {
   currentAuth = auth;
   localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
-  scheduleRefresh(auth);
+  // Prevent activity listener from triggering a refresh immediately after login/refresh
+  lastRefreshAttempt = Date.now();
+  startActivityListener();
 }
 
 /**
@@ -71,10 +88,7 @@ export function saveAuth(auth: AuthState): void {
 export function clearAuth(): void {
   currentAuth = null;
   localStorage.removeItem(AUTH_KEY);
-  if (refreshTimer) {
-    clearTimeout(refreshTimer);
-    refreshTimer = null;
-  }
+  stopActivityListener();
 }
 
 /**
@@ -95,64 +109,149 @@ export function getAccessToken(): string | null {
   return null; // Token expired, needs refresh
 }
 
-/**
- * Schedule automatic token refresh before expiry.
- */
-function scheduleRefresh(auth: AuthState): void {
-  if (refreshTimer) {
-    clearTimeout(refreshTimer);
-  }
-  // Refresh 60 seconds before expiry
-  const refreshAt = auth.expiresAt - 60_000;
-  const delay = refreshAt - Date.now();
-  if (delay <= 0) return; // Already expired or about to
+// ── Activity-based token refresh ──────────────────────────────
+let activityListenerActive = false;
+let lastRefreshAttempt = 0;
+let refreshing = false;
 
-  refreshTimer = setTimeout(async () => {
-    try {
-      await refreshAccessToken();
-    } catch {
-      // Refresh failed — keep auth state so JWT can still be sent
-      // to the gateway for server-side verification.
-    }
-  }, delay);
+/**
+ * Called on user activity. If the token is within the refresh window,
+ * trigger a refresh (throttled).
+ */
+async function onUserActivity(): Promise<void> {
+  if (refreshing) return;
+  const auth = currentAuth ?? loadAuth();
+  if (!auth?.refreshToken) return;
+
+  const now = Date.now();
+
+  // Throttle: don't refresh too frequently
+  if (now - lastRefreshAttempt < REFRESH_THROTTLE_MS) return;
+
+  lastRefreshAttempt = now;
+  refreshing = true;
+  try {
+    await refreshAccessToken();
+  } catch {
+    // silent — will retry on next user activity
+  } finally {
+    refreshing = false;
+  }
+}
+
+function startActivityListener(): void {
+  if (activityListenerActive) return;
+  activityListenerActive = true;
+  for (const evt of ["click", "keydown", "scroll", "mousemove", "touchstart"]) {
+    document.addEventListener(evt, onUserActivity, { passive: true, capture: true });
+  }
+}
+
+function stopActivityListener(): void {
+  if (!activityListenerActive) return;
+  activityListenerActive = false;
+  for (const evt of ["click", "keydown", "scroll", "mousemove", "touchstart"]) {
+    document.removeEventListener(evt, onUserActivity, true);
+  }
 }
 
 /**
  * Refresh the access token using the refresh token.
- * Called automatically before expiry, or manually when needed.
+ * Reuses the main gateway WebSocket when available; falls back to
+ * a temporary connection otherwise (e.g. before the main client starts).
  */
 export async function refreshAccessToken(): Promise<AuthState | null> {
   const auth = loadAuth();
   if (!auth?.refreshToken) return null;
 
-  // Use HTTP endpoint instead of WebSocket for token refresh
-  const baseUrl = window.location.origin;
-  try {
-    const response = await fetch(`${baseUrl}/api/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken: auth.refreshToken }),
-    });
+  // Fast path: reuse the existing gateway connection
+  if (sharedClient) {
+    try {
+      const p = await sharedClient.request<{
+        accessToken: string;
+        refreshToken: string;
+        expiresIn: number;
+      }>("auth.refresh", { refreshToken: auth.refreshToken });
 
-    if (!response.ok) {
-      // Don't clear auth on HTTP failure — the endpoint may not exist.
-      // Let the token stay so it can be sent to the gateway for server-side verification.
-      return null;
+      const newAuth: AuthState = {
+        ...auth,
+        accessToken: p.accessToken,
+        refreshToken: p.refreshToken,
+        expiresAt: Date.now() + p.expiresIn * 1000,
+      };
+      saveAuth(newAuth);
+      return newAuth;
+    } catch {
+      // Main connection may be down — fall through to temporary WS
     }
-
-    const data = await response.json();
-    const newAuth: AuthState = {
-      ...auth,
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
-      expiresAt: Date.now() + data.expiresIn * 1000,
-    };
-    saveAuth(newAuth);
-    return newAuth;
-  } catch {
-    // If HTTP refresh fails, try via gateway WebSocket
-    return null;
   }
+
+  // Fallback: temporary WebSocket (used during login/register flows)
+  const settings = loadSettings();
+  const wsUrl = settings.gatewayUrl;
+
+  return new Promise((resolve) => {
+    const ws = new WebSocket(wsUrl);
+    let handshakeDone = false;
+
+    ws.onopen = () => {
+      ws.send(
+        JSON.stringify({
+          type: "req",
+          id: generateUUID(),
+          method: "connect",
+          params: buildConnectParams(),
+        }),
+      );
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const frame = JSON.parse(event.data);
+        if (frame.type === "res" && !handshakeDone) {
+          handshakeDone = true;
+          ws.send(
+            JSON.stringify({
+              type: "req",
+              id: generateUUID(),
+              method: "auth.refresh",
+              params: { refreshToken: auth.refreshToken },
+            }),
+          );
+          return;
+        }
+        if (frame.type === "res" && handshakeDone) {
+          ws.close();
+          if (frame.ok && frame.payload) {
+            const p = frame.payload as {
+              accessToken: string;
+              refreshToken: string;
+              expiresIn: number;
+            };
+            const newAuth: AuthState = {
+              ...auth,
+              accessToken: p.accessToken,
+              refreshToken: p.refreshToken,
+              expiresAt: Date.now() + p.expiresIn * 1000,
+            };
+            saveAuth(newAuth);
+            resolve(newAuth);
+          } else {
+            resolve(null);
+          }
+        }
+      } catch {
+        resolve(null);
+      }
+    };
+
+    ws.onerror = () => resolve(null);
+
+    setTimeout(() => {
+      ws.close();
+      resolve(null);
+    }, 10_000);
+  });
 }
 
 function buildConnectParams() {

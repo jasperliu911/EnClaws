@@ -13,6 +13,7 @@ import {
 } from "./app-settings.ts";
 import { handleAgentEvent, resetToolStream, type AgentEventPayload } from "./app-tool-stream.ts";
 import type { OpenClawApp } from "./app.ts";
+import { setRefreshClient } from "./auth-store.ts";
 import { shouldReloadHistoryForFinalEvent } from "./chat-event-reload.ts";
 import { loadAgents, loadToolsCatalog } from "./controllers/agents.ts";
 import { loadAssistantIdentity } from "./controllers/assistant-identity.ts";
@@ -211,6 +212,7 @@ export function connectGateway(host: GatewayHost) {
     },
   });
   host.client = client;
+  setRefreshClient(client);
   previousClient?.stop();
   client.start();
 }
