@@ -269,10 +269,12 @@ async function resolveFeishuSenderName(
     const creds = extractFeishuCredentials(cfg as unknown as Record<string, unknown>, provider, accountId);
     if (!creds) return;
 
+    const messageId = (ctx as Record<string, unknown>).MessageSid as string | undefined;
     const name = await resolveFeishuUserName({
       appId: creds.appId,
       appSecret: creds.appSecret,
       chatId: chatId ?? undefined,
+      messageId: messageId ?? undefined,
       openId: senderId,
     });
 

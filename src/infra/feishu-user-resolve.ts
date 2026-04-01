@@ -101,57 +101,36 @@ async function fetchChatMembers(
 }
 
 // ---------------------------------------------------------------------------
-// P2P chat_id resolution
+// chat_id resolution via message_id (works for both group and p2p)
 // ---------------------------------------------------------------------------
 
-/** Cache: openId → p2p chatId */
-const p2pChatIdCache = new Map<string, { chatId: string; expiresAt: number }>();
-const P2P_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-const MAX_P2P_CACHE_ENTRIES = 500;
-
 /**
- * Resolve the p2p chat_id for a user via Feishu API.
- * Lists the bot's p2p chats and checks members to find the matching one.
- * Limits candidate checks to avoid excessive API calls when the bot has many p2p chats.
+ * Get chat_id from a message_id via `GET /im/v1/messages/{message_id}`.
+ * This is the most direct way to resolve chat_id for p2p chats without
+ * enumerating all bot conversations.
  */
-const MAX_P2P_CANDIDATES = 10;
-
-async function resolveP2pChatId(
+async function getChatIdFromMessage(
   token: string,
-  openId: string,
+  messageId: string,
 ): Promise<string | undefined> {
-  const cached = p2pChatIdCache.get(openId);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.chatId;
-  }
-
   try {
-    const url = `https://open.feishu.cn/open-apis/im/v1/chats?user_id_type=open_id&search_type=p2p&page_size=${MAX_P2P_CANDIDATES}`;
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await fetch(
+      `https://open.feishu.cn/open-apis/im/v1/messages/${messageId}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
     const data = await res.json() as {
       code?: number;
-      data?: { items?: Array<{ chat_id?: string; owner_id?: string }> };
+      data?: { items?: Array<{ chat_id?: string }> };
     };
-    if (data.code !== 0 || !data.data?.items) return undefined;
-
-    for (const item of data.data.items) {
-      if (!item.chat_id) continue;
-      const members = await fetchChatMembers(token, item.chat_id);
-      if (members?.has(openId)) {
-        if (p2pChatIdCache.size >= MAX_P2P_CACHE_ENTRIES) {
-          const oldest = p2pChatIdCache.keys().next().value;
-          if (oldest !== undefined) p2pChatIdCache.delete(oldest);
-        }
-        p2pChatIdCache.set(openId, { chatId: item.chat_id, expiresAt: Date.now() + P2P_CACHE_TTL_MS });
-        return item.chat_id;
-      }
+    if (data.code !== 0) {
+      log.warn(`get message failed for ${messageId}: code=${data.code}`);
+      return undefined;
     }
+    return data.data?.items?.[0]?.chat_id ?? undefined;
   } catch (err) {
-    log.warn(`p2p chat_id resolve failed for ${openId}: ${String(err)}`);
+    log.warn(`get message request failed for ${messageId}: ${String(err)}`);
+    return undefined;
   }
-  return undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -163,7 +142,8 @@ async function resolveP2pChatId(
  *
  * @param appId - Feishu app ID (from channel config)
  * @param appSecret - Feishu app secret
- * @param chatId - Chat ID (group or p2p). If undefined, attempts p2p resolution via openId.
+ * @param chatId - Chat ID (group or p2p). If undefined, falls back to messageId resolution.
+ * @param messageId - Message ID from the inbound event. Used to resolve chat_id for p2p chats.
  * @param openId - User's open_id
  * @returns Display name or undefined if resolution fails
  */
@@ -171,6 +151,7 @@ export async function resolveFeishuUserName(params: {
   appId: string;
   appSecret: string;
   chatId?: string;
+  messageId?: string;
   openId: string;
 }): Promise<string | undefined> {
   const { appId, appSecret, openId } = params;
@@ -187,11 +168,11 @@ export async function resolveFeishuUserName(params: {
   const token = await getTenantAccessToken(appId, appSecret);
   if (!token) return undefined;
 
-  // For p2p chats, resolve chat_id from openId
-  if (!chatId) {
-    chatId = await resolveP2pChatId(token, openId);
-    if (!chatId) return undefined;
+  // For p2p chats, resolve chat_id from the message_id directly
+  if (!chatId && params.messageId) {
+    chatId = await getChatIdFromMessage(token, params.messageId);
   }
+  if (!chatId) return undefined;
 
   const members = await fetchChatMembers(token, chatId);
   return members?.get(openId);
