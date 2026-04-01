@@ -42,11 +42,11 @@ export type InteractionTraceRecorder = {
  * Returns null if tracing is not applicable (no tenantId or DB not initialized).
  */
 /**
- * Check if tracing is globally enabled via OPENCLAW_TRACE_ENABLED env var.
+ * Check if tracing is globally enabled via ENCLAWS_TRACE_ENABLED env var.
  * Defaults to false — tracing is opt-in since it's primarily a debugging tool.
  */
 function isTraceGloballyEnabled(): boolean {
-  return parseBooleanValue(process.env.OPENCLAW_TRACE_ENABLED) ?? false;
+  return parseBooleanValue(process.env.ENCLAWS_TRACE_ENABLED) ?? false;
 }
 
 export function createInteractionTraceRecorder(
@@ -56,7 +56,7 @@ export function createInteractionTraceRecorder(
   if (!ctx.tenantId || !isDbInitialized()) {
     return null;
   }
-  // Global env toggle: OPENCLAW_TRACE_ENABLED (default: false)
+  // Global env toggle: ENCLAWS_TRACE_ENABLED (default: false)
   if (!isTraceGloballyEnabled()) {
     return null;
   }

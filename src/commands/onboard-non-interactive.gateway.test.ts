@@ -69,8 +69,8 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
       throw new Error("temp home not initialized");
     }
     const stateDir = await fs.mkdtemp(path.join(tempHome, prefix));
-    process.env.OPENCLAW_STATE_DIR = stateDir;
-    delete process.env.OPENCLAW_CONFIG_PATH;
+    process.env.ENCLAWS_STATE_DIR = stateDir;
+    delete process.env.ENCLAWS_CONFIG_PATH;
     return stateDir;
   };
   const withStateDir = async (
@@ -87,23 +87,23 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
   beforeAll(async () => {
     envSnapshot = captureEnv([
       "HOME",
-      "OPENCLAW_STATE_DIR",
-      "OPENCLAW_CONFIG_PATH",
-      "OPENCLAW_SKIP_CHANNELS",
-      "OPENCLAW_SKIP_GMAIL_WATCHER",
-      "OPENCLAW_SKIP_CRON",
-      "OPENCLAW_SKIP_CANVAS_HOST",
-      "OPENCLAW_SKIP_BROWSER_CONTROL_SERVER",
-      "OPENCLAW_GATEWAY_TOKEN",
-      "OPENCLAW_GATEWAY_PASSWORD",
+      "ENCLAWS_STATE_DIR",
+      "ENCLAWS_CONFIG_PATH",
+      "ENCLAWS_SKIP_CHANNELS",
+      "ENCLAWS_SKIP_GMAIL_WATCHER",
+      "ENCLAWS_SKIP_CRON",
+      "ENCLAWS_SKIP_CANVAS_HOST",
+      "ENCLAWS_SKIP_BROWSER_CONTROL_SERVER",
+      "ENCLAWS_GATEWAY_TOKEN",
+      "ENCLAWS_GATEWAY_PASSWORD",
     ]);
-    process.env.OPENCLAW_SKIP_CHANNELS = "1";
-    process.env.OPENCLAW_SKIP_GMAIL_WATCHER = "1";
-    process.env.OPENCLAW_SKIP_CRON = "1";
-    process.env.OPENCLAW_SKIP_CANVAS_HOST = "1";
-    process.env.OPENCLAW_SKIP_BROWSER_CONTROL_SERVER = "1";
-    delete process.env.OPENCLAW_GATEWAY_TOKEN;
-    delete process.env.OPENCLAW_GATEWAY_PASSWORD;
+    process.env.ENCLAWS_SKIP_CHANNELS = "1";
+    process.env.ENCLAWS_SKIP_GMAIL_WATCHER = "1";
+    process.env.ENCLAWS_SKIP_CRON = "1";
+    process.env.ENCLAWS_SKIP_CANVAS_HOST = "1";
+    process.env.ENCLAWS_SKIP_BROWSER_CONTROL_SERVER = "1";
+    delete process.env.ENCLAWS_GATEWAY_TOKEN;
+    delete process.env.ENCLAWS_GATEWAY_PASSWORD;
 
     tempHome = await makeTempWorkspace("openclaw-onboard-");
     process.env.HOME = tempHome;
@@ -188,8 +188,8 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
       return;
     }
     await withStateDir("state-lan-", async (stateDir) => {
-      process.env.OPENCLAW_STATE_DIR = stateDir;
-      process.env.OPENCLAW_CONFIG_PATH = path.join(stateDir, "openclaw.json");
+      process.env.ENCLAWS_STATE_DIR = stateDir;
+      process.env.ENCLAWS_CONFIG_PATH = path.join(stateDir, "openclaw.json");
 
       const port = getPseudoPort(40_000);
       const workspace = path.join(stateDir, "openclaw");

@@ -17,8 +17,8 @@ function createPrompter(overrides: Partial<WizardPrompter>): WizardPrompter {
 
 describe("applyAuthChoice (moonshot)", () => {
   const lifecycle = createAuthTestLifecycle([
-    "OPENCLAW_STATE_DIR",
-    "OPENCLAW_AGENT_DIR",
+    "ENCLAWS_STATE_DIR",
+    "ENCLAWS_AGENT_DIR",
     "PI_CODING_AGENT_DIR",
     "MOONSHOT_API_KEY",
   ]);

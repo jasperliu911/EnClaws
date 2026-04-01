@@ -133,7 +133,7 @@ export function resolveGatewayOptions(opts?: GatewayCallOptions) {
       // When no explicit token/URL override, resolve from config with config-first
       // precedence to match the gateway server's auth resolution (resolveGatewayAuth
       // uses config-first). Without this, env-first default can cause token_mismatch
-      // when OPENCLAW_GATEWAY_TOKEN env var differs from gateway.auth.token in config.
+      // when ENCLAWS_GATEWAY_TOKEN env var differs from gateway.auth.token in config.
       resolveGatewayCredentialsFromConfig({
         cfg,
         env: process.env,

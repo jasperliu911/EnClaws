@@ -203,7 +203,7 @@ const testConfigRoot = {
 
 export const setTestConfigRoot = (root: string) => {
   testConfigRoot.value = root;
-  process.env.OPENCLAW_CONFIG_PATH = path.join(root, "openclaw.json");
+  process.env.ENCLAWS_CONFIG_PATH = path.join(root, "openclaw.json");
 };
 
 export const testTailnetIPv4 = hoisted.testTailnetIPv4;
@@ -608,7 +608,7 @@ vi.mock("../plugins/loader.js", async () => {
   };
 });
 
-process.env.OPENCLAW_SKIP_CHANNELS = "1";
-process.env.OPENCLAW_SKIP_CRON = "1";
-process.env.OPENCLAW_SKIP_CHANNELS = "1";
-process.env.OPENCLAW_SKIP_CRON = "1";
+process.env.ENCLAWS_SKIP_CHANNELS = "1";
+process.env.ENCLAWS_SKIP_CRON = "1";
+process.env.ENCLAWS_SKIP_CHANNELS = "1";
+process.env.ENCLAWS_SKIP_CRON = "1";

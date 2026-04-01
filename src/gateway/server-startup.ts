@@ -123,10 +123,10 @@ export async function startGatewaySidecars(params: {
   }
 
   // Launch configured channels so gateway replies via the surface the message came from.
-  // Tests can opt out via OPENCLAW_SKIP_CHANNELS (or legacy OPENCLAW_SKIP_PROVIDERS).
+  // Tests can opt out via ENCLAWS_SKIP_CHANNELS (or legacy ENCLAWS_SKIP_PROVIDERS).
   const skipChannels =
-    isTruthyEnvValue(process.env.OPENCLAW_SKIP_CHANNELS) ||
-    isTruthyEnvValue(process.env.OPENCLAW_SKIP_PROVIDERS);
+    isTruthyEnvValue(process.env.ENCLAWS_SKIP_CHANNELS) ||
+    isTruthyEnvValue(process.env.ENCLAWS_SKIP_PROVIDERS);
   if (!skipChannels) {
     try {
       await params.startChannels();
@@ -135,7 +135,7 @@ export async function startGatewaySidecars(params: {
     }
   } else {
     params.logChannels.info(
-      "skipping channel start (OPENCLAW_SKIP_CHANNELS=1 or OPENCLAW_SKIP_PROVIDERS=1)",
+      "skipping channel start (ENCLAWS_SKIP_CHANNELS=1 or ENCLAWS_SKIP_PROVIDERS=1)",
     );
   }
 

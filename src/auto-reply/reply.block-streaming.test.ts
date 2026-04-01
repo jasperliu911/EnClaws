@@ -88,7 +88,7 @@ async function withTempHome<T>(fn: (home: string) => Promise<T>): Promise<T> {
 
 describe("block streaming", () => {
   beforeEach(() => {
-    vi.stubEnv("OPENCLAW_TEST_FAST", "1");
+    vi.stubEnv("ENCLAWS_TEST_FAST", "1");
     piEmbeddedMock.abortEmbeddedPiRun.mockClear().mockReturnValue(false);
     piEmbeddedMock.queueEmbeddedPiMessage.mockClear().mockReturnValue(false);
     piEmbeddedMock.isEmbeddedPiRunActive.mockClear().mockReturnValue(false);

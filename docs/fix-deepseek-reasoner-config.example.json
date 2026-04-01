@@ -94,7 +94,7 @@
     "bind": "loopback",
     "auth": {
       "mode": "token",
-      "token": "__OPENCLAW_REDACTED__"
+      "token": "__ENCLAWS_REDACTED__"
     },
     "tailscale": {
       "mode": "off",

@@ -40,7 +40,7 @@ describe("config plugin validation", () => {
   }
 
   const validateInHome = (home: string, raw: unknown) => {
-    process.env.OPENCLAW_STATE_DIR = path.join(home, ".enclaws");
+    process.env.ENCLAWS_STATE_DIR = path.join(home, ".enclaws");
     return validateConfigObjectWithPlugins(raw);
   };
 

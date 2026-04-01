@@ -23,16 +23,16 @@ import { HEARTBEAT_TOKEN } from "./tokens.js";
 let getReplyFromConfig: typeof import("./reply.js").getReplyFromConfig;
 let previousFastTestEnv: string | undefined;
 beforeAll(async () => {
-  previousFastTestEnv = process.env.OPENCLAW_TEST_FAST;
-  process.env.OPENCLAW_TEST_FAST = "1";
+  previousFastTestEnv = process.env.ENCLAWS_TEST_FAST;
+  process.env.ENCLAWS_TEST_FAST = "1";
   ({ getReplyFromConfig } = await import("./reply.js"));
 });
 afterAll(() => {
   if (previousFastTestEnv === undefined) {
-    delete process.env.OPENCLAW_TEST_FAST;
+    delete process.env.ENCLAWS_TEST_FAST;
     return;
   }
-  process.env.OPENCLAW_TEST_FAST = previousFastTestEnv;
+  process.env.ENCLAWS_TEST_FAST = previousFastTestEnv;
 });
 
 installTriggerHandlingE2eTestHooks();

@@ -297,8 +297,8 @@ export function triggerOpenClawRestart(): RestartAttempt {
   if (process.platform !== "darwin") {
     if (process.platform === "linux") {
       const unit = normalizeSystemdUnit(
-        process.env.OPENCLAW_SYSTEMD_UNIT,
-        process.env.OPENCLAW_PROFILE,
+        process.env.ENCLAWS_SYSTEMD_UNIT,
+        process.env.ENCLAWS_PROFILE,
       );
       const userArgs = ["--user", "restart", unit];
       tried.push(`systemctl ${userArgs.join(" ")}`);
@@ -332,8 +332,8 @@ export function triggerOpenClawRestart(): RestartAttempt {
   }
 
   const label =
-    process.env.OPENCLAW_LAUNCHD_LABEL ||
-    resolveGatewayLaunchAgentLabel(process.env.OPENCLAW_PROFILE);
+    process.env.ENCLAWS_LAUNCHD_LABEL ||
+    resolveGatewayLaunchAgentLabel(process.env.ENCLAWS_PROFILE);
   const uid = typeof process.getuid === "function" ? process.getuid() : undefined;
   const target = uid !== undefined ? `gui/${uid}/${label}` : label;
   const args = ["kickstart", "-k", target];

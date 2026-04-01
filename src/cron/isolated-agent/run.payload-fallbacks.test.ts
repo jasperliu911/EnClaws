@@ -216,8 +216,8 @@ describe("runCronIsolatedAgentTurn — payload.fallbacks", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    previousFastTestEnv = process.env.OPENCLAW_TEST_FAST;
-    delete process.env.OPENCLAW_TEST_FAST;
+    previousFastTestEnv = process.env.ENCLAWS_TEST_FAST;
+    delete process.env.ENCLAWS_TEST_FAST;
     resolveAgentModelFallbacksOverrideMock.mockReturnValue(undefined);
     resolveCronSessionMock.mockReturnValue({
       storePath: "/tmp/store.json",
@@ -235,10 +235,10 @@ describe("runCronIsolatedAgentTurn — payload.fallbacks", () => {
 
   afterEach(() => {
     if (previousFastTestEnv == null) {
-      delete process.env.OPENCLAW_TEST_FAST;
+      delete process.env.ENCLAWS_TEST_FAST;
       return;
     }
-    process.env.OPENCLAW_TEST_FAST = previousFastTestEnv;
+    process.env.ENCLAWS_TEST_FAST = previousFastTestEnv;
   });
 
   it("passes payload.fallbacks as fallbacksOverride when defined", async () => {

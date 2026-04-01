@@ -135,7 +135,7 @@ async function withMediaAutoDetectEnv<T>(
       GROQ_API_KEY: undefined,
       DEEPGRAM_API_KEY: undefined,
       GEMINI_API_KEY: undefined,
-      OPENCLAW_AGENT_DIR: undefined,
+      ENCLAWS_AGENT_DIR: undefined,
       PI_CODING_AGENT_DIR: undefined,
       ...env,
     },
@@ -483,7 +483,7 @@ describe("applyMediaUnderstanding", () => {
     await withMediaAutoDetectEnv(
       {
         PATH: emptyBinDir,
-        OPENCLAW_AGENT_DIR: isolatedAgentDir,
+        ENCLAWS_AGENT_DIR: isolatedAgentDir,
         PI_CODING_AGENT_DIR: isolatedAgentDir,
       },
       async () => {

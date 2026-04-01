@@ -5,7 +5,7 @@
  *   node --import tsx src/db/migrate.ts          # run pending migrations
  *   node --import tsx src/db/migrate.ts --status  # show migration status
  *
- * Supports both PostgreSQL and SQLite based on OPENCLAW_DB_URL.
+ * Supports both PostgreSQL and SQLite based on ENCLAWS_DB_URL.
  */
 
 import fs from "node:fs";

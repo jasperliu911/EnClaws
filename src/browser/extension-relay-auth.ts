@@ -7,7 +7,7 @@ const ENCLAWS_RELAY_BROWSER = "OpenClaw/extension-relay";
 
 function resolveGatewayAuthToken(): string | null {
   const envToken =
-    process.env.OPENCLAW_GATEWAY_TOKEN?.trim() || process.env.CLAWDBOT_GATEWAY_TOKEN?.trim();
+    process.env.ENCLAWS_GATEWAY_TOKEN?.trim() || process.env.CLAWDBOT_GATEWAY_TOKEN?.trim();
   if (envToken) {
     return envToken;
   }
@@ -31,7 +31,7 @@ export function resolveRelayAcceptedTokensForPort(port: number): string[] {
   const gatewayToken = resolveGatewayAuthToken();
   if (!gatewayToken) {
     throw new Error(
-      "extension relay requires gateway auth token (set gateway.auth.token or OPENCLAW_GATEWAY_TOKEN)",
+      "extension relay requires gateway auth token (set gateway.auth.token or ENCLAWS_GATEWAY_TOKEN)",
     );
   }
   const relayToken = deriveRelayAuthToken(gatewayToken, port);

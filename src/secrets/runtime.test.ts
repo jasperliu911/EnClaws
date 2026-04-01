@@ -228,7 +228,7 @@ describe("secrets runtime snapshot", () => {
     const stateDir = path.join(root, ".enclaws");
     const mainAgentDir = path.join(stateDir, "agents", "main", "agent");
     const workerStorePath = path.join(stateDir, "agents", "worker", "agent", "auth-profiles.json");
-    const prevStateDir = process.env.OPENCLAW_STATE_DIR;
+    const prevStateDir = process.env.ENCLAWS_STATE_DIR;
 
     try {
       await fs.mkdir(mainAgentDir, { recursive: true });
@@ -246,7 +246,7 @@ describe("secrets runtime snapshot", () => {
         }),
         "utf8",
       );
-      process.env.OPENCLAW_STATE_DIR = stateDir;
+      process.env.ENCLAWS_STATE_DIR = stateDir;
 
       await prepareSecretsRuntimeSnapshot({
         config: {
@@ -260,9 +260,9 @@ describe("secrets runtime snapshot", () => {
       await expect(fs.access(workerStorePath)).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
       if (prevStateDir === undefined) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.ENCLAWS_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = prevStateDir;
+        process.env.ENCLAWS_STATE_DIR = prevStateDir;
       }
       await fs.rm(root, { recursive: true, force: true });
     }

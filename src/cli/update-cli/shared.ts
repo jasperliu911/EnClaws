@@ -121,7 +121,7 @@ export async function isEmptyDir(targetPath: string): Promise<boolean> {
 }
 
 export function resolveGitInstallDir(): string {
-  const override = process.env.OPENCLAW_GIT_DIR?.trim();
+  const override = process.env.ENCLAWS_GIT_DIR?.trim();
   if (override) {
     return path.resolve(override);
   }
@@ -213,7 +213,7 @@ export async function ensureGitCheckout(params: {
     const empty = await isEmptyDir(params.dir);
     if (!empty) {
       throw new Error(
-        `OPENCLAW_GIT_DIR points at a non-git directory: ${params.dir}. Set OPENCLAW_GIT_DIR to an empty folder or an openclaw checkout.`,
+        `ENCLAWS_GIT_DIR points at a non-git directory: ${params.dir}. Set ENCLAWS_GIT_DIR to an empty folder or an openclaw checkout.`,
       );
     }
 
@@ -227,7 +227,7 @@ export async function ensureGitCheckout(params: {
   }
 
   if (!(await isCorePackage(params.dir))) {
-    throw new Error(`OPENCLAW_GIT_DIR does not look like a core checkout: ${params.dir}.`);
+    throw new Error(`ENCLAWS_GIT_DIR does not look like a core checkout: ${params.dir}.`);
   }
 
   return null;

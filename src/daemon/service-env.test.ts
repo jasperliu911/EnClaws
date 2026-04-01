@@ -272,14 +272,14 @@ describe("buildServiceEnvironment", () => {
     } else {
       expect(env.PATH).toContain("/usr/bin");
     }
-    expect(env.OPENCLAW_GATEWAY_PORT).toBe("18789");
-    expect(env.OPENCLAW_GATEWAY_TOKEN).toBe("secret");
-    expect(env.OPENCLAW_SERVICE_MARKER).toBe("openclaw");
-    expect(env.OPENCLAW_SERVICE_KIND).toBe("gateway");
-    expect(typeof env.OPENCLAW_SERVICE_VERSION).toBe("string");
-    expect(env.OPENCLAW_SYSTEMD_UNIT).toBe("openclaw-gateway.service");
+    expect(env.ENCLAWS_GATEWAY_PORT).toBe("18789");
+    expect(env.ENCLAWS_GATEWAY_TOKEN).toBe("secret");
+    expect(env.ENCLAWS_SERVICE_MARKER).toBe("openclaw");
+    expect(env.ENCLAWS_SERVICE_KIND).toBe("gateway");
+    expect(typeof env.ENCLAWS_SERVICE_VERSION).toBe("string");
+    expect(env.ENCLAWS_SYSTEMD_UNIT).toBe("openclaw-gateway.service");
     if (process.platform === "darwin") {
-      expect(env.OPENCLAW_LAUNCHD_LABEL).toBe("ai.openclaw.gateway");
+      expect(env.ENCLAWS_LAUNCHD_LABEL).toBe("ai.openclaw.gateway");
     }
   });
 
@@ -301,12 +301,12 @@ describe("buildServiceEnvironment", () => {
 
   it("uses profile-specific unit and label", () => {
     const env = buildServiceEnvironment({
-      env: { HOME: "/home/user", OPENCLAW_PROFILE: "work" },
+      env: { HOME: "/home/user", ENCLAWS_PROFILE: "work" },
       port: 18789,
     });
-    expect(env.OPENCLAW_SYSTEMD_UNIT).toBe("openclaw-gateway-work.service");
+    expect(env.ENCLAWS_SYSTEMD_UNIT).toBe("openclaw-gateway-work.service");
     if (process.platform === "darwin") {
-      expect(env.OPENCLAW_LAUNCHD_LABEL).toBe("ai.openclaw.work");
+      expect(env.ENCLAWS_LAUNCHD_LABEL).toBe("ai.openclaw.work");
     }
   });
 
@@ -364,40 +364,40 @@ describe("buildNodeServiceEnvironment", () => {
     expect(env.HOME).toBe("/home/user");
   });
 
-  it("passes through OPENCLAW_GATEWAY_TOKEN for node services", () => {
+  it("passes through ENCLAWS_GATEWAY_TOKEN for node services", () => {
     const env = buildNodeServiceEnvironment({
-      env: { HOME: "/home/user", OPENCLAW_GATEWAY_TOKEN: " node-token " },
+      env: { HOME: "/home/user", ENCLAWS_GATEWAY_TOKEN: " node-token " },
     });
-    expect(env.OPENCLAW_GATEWAY_TOKEN).toBe("node-token");
+    expect(env.ENCLAWS_GATEWAY_TOKEN).toBe("node-token");
   });
 
-  it("maps legacy CLAWDBOT_GATEWAY_TOKEN to OPENCLAW_GATEWAY_TOKEN for node services", () => {
+  it("maps legacy CLAWDBOT_GATEWAY_TOKEN to ENCLAWS_GATEWAY_TOKEN for node services", () => {
     const env = buildNodeServiceEnvironment({
       env: { HOME: "/home/user", CLAWDBOT_GATEWAY_TOKEN: " legacy-token " },
     });
-    expect(env.OPENCLAW_GATEWAY_TOKEN).toBe("legacy-token");
+    expect(env.ENCLAWS_GATEWAY_TOKEN).toBe("legacy-token");
   });
 
-  it("prefers OPENCLAW_GATEWAY_TOKEN over legacy CLAWDBOT_GATEWAY_TOKEN", () => {
+  it("prefers ENCLAWS_GATEWAY_TOKEN over legacy CLAWDBOT_GATEWAY_TOKEN", () => {
     const env = buildNodeServiceEnvironment({
       env: {
         HOME: "/home/user",
-        OPENCLAW_GATEWAY_TOKEN: "openclaw-token",
+        ENCLAWS_GATEWAY_TOKEN: "openclaw-token",
         CLAWDBOT_GATEWAY_TOKEN: "legacy-token",
       },
     });
-    expect(env.OPENCLAW_GATEWAY_TOKEN).toBe("openclaw-token");
+    expect(env.ENCLAWS_GATEWAY_TOKEN).toBe("openclaw-token");
   });
 
-  it("omits OPENCLAW_GATEWAY_TOKEN when both token env vars are empty", () => {
+  it("omits ENCLAWS_GATEWAY_TOKEN when both token env vars are empty", () => {
     const env = buildNodeServiceEnvironment({
       env: {
         HOME: "/home/user",
-        OPENCLAW_GATEWAY_TOKEN: "   ",
+        ENCLAWS_GATEWAY_TOKEN: "   ",
         CLAWDBOT_GATEWAY_TOKEN: " ",
       },
     });
-    expect(env.OPENCLAW_GATEWAY_TOKEN).toBeUndefined();
+    expect(env.ENCLAWS_GATEWAY_TOKEN).toBeUndefined();
   });
 
   it("forwards proxy environment variables for node services", () => {
@@ -458,27 +458,27 @@ describe("resolveGatewayStateDir", () => {
   });
 
   it("appends the profile suffix when set", () => {
-    const env = { HOME: "/Users/test", OPENCLAW_PROFILE: "rescue" };
+    const env = { HOME: "/Users/test", ENCLAWS_PROFILE: "rescue" };
     expect(resolveGatewayStateDir(env)).toBe(path.join("/Users/test", ".enclaws-rescue"));
   });
 
   it("treats default profiles as the base state dir", () => {
-    const env = { HOME: "/Users/test", OPENCLAW_PROFILE: "Default" };
+    const env = { HOME: "/Users/test", ENCLAWS_PROFILE: "Default" };
     expect(resolveGatewayStateDir(env)).toBe(path.join("/Users/test", ".enclaws"));
   });
 
-  it("uses OPENCLAW_STATE_DIR when provided", () => {
-    const env = { HOME: "/Users/test", OPENCLAW_STATE_DIR: "/var/lib/openclaw" };
+  it("uses ENCLAWS_STATE_DIR when provided", () => {
+    const env = { HOME: "/Users/test", ENCLAWS_STATE_DIR: "/var/lib/openclaw" };
     expect(resolveGatewayStateDir(env)).toBe(path.resolve("/var/lib/openclaw"));
   });
 
-  it("expands ~ in OPENCLAW_STATE_DIR", () => {
-    const env = { HOME: "/Users/test", OPENCLAW_STATE_DIR: "~/openclaw-state" };
+  it("expands ~ in ENCLAWS_STATE_DIR", () => {
+    const env = { HOME: "/Users/test", ENCLAWS_STATE_DIR: "~/openclaw-state" };
     expect(resolveGatewayStateDir(env)).toBe(path.resolve("/Users/test/openclaw-state"));
   });
 
   it("preserves Windows absolute paths without HOME", () => {
-    const env = { OPENCLAW_STATE_DIR: "C:\\State.enclaws" };
+    const env = { ENCLAWS_STATE_DIR: "C:\\State.enclaws" };
     expect(resolveGatewayStateDir(env)).toBe("C:\\State.enclaws");
   });
 });

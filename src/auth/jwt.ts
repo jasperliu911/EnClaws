@@ -2,9 +2,9 @@
  * JWT token management for multi-tenant auth.
  *
  * Environment variables:
- *   OPENCLAW_JWT_SECRET            - Secret key for signing tokens (required)
- *   OPENCLAW_JWT_ACCESS_EXPIRES    - Access token TTL (default: "15m")
- *   OPENCLAW_JWT_REFRESH_EXPIRES   - Refresh token TTL (default: "7d")
+ *   ENCLAWS_JWT_SECRET            - Secret key for signing tokens (required)
+ *   ENCLAWS_JWT_ACCESS_EXPIRES    - Access token TTL (default: "15m")
+ *   ENCLAWS_JWT_REFRESH_EXPIRES   - Refresh token TTL (default: "7d")
  */
 
 import jwt from "jsonwebtoken";
@@ -15,18 +15,18 @@ import { query, getDbType, DB_SQLITE } from "../db/index.js";
 /**
  * Per-boot ephemeral secret: generated once on startup so that all
  * previously issued JWTs are automatically invalidated on restart.
- * Only used when OPENCLAW_JWT_SECRET is not explicitly configured.
+ * Only used when ENCLAWS_JWT_SECRET is not explicitly configured.
  */
 let ephemeralSecret: string | null = null;
 
 function getSecret(): string {
-  const secret = process.env.OPENCLAW_JWT_SECRET;
+  const secret = process.env.ENCLAWS_JWT_SECRET;
   if (secret) {
     return secret;
   }
   if (!ephemeralSecret) {
     ephemeralSecret = crypto.randomBytes(64).toString("hex");
-    console.log("[auth] No OPENCLAW_JWT_SECRET set — using ephemeral secret (JWTs invalidated on restart)");
+    console.log("[auth] No ENCLAWS_JWT_SECRET set — using ephemeral secret (JWTs invalidated on restart)");
     // Revoke all refresh tokens so that old sessions cannot silently re-authenticate
     void revokeAllRefreshTokensOnBoot();
   }
@@ -48,11 +48,11 @@ async function revokeAllRefreshTokensOnBoot(): Promise<void> {
 }
 
 function getAccessExpires(): string {
-  return process.env.OPENCLAW_JWT_ACCESS_EXPIRES ?? "15m";
+  return process.env.ENCLAWS_JWT_ACCESS_EXPIRES ?? "15m";
 }
 
 function getRefreshExpires(): string {
-  return process.env.OPENCLAW_JWT_REFRESH_EXPIRES ?? "7d";
+  return process.env.ENCLAWS_JWT_REFRESH_EXPIRES ?? "7d";
 }
 
 function parseExpiresIn(expr: string): number {

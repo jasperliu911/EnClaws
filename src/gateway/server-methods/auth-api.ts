@@ -34,7 +34,7 @@ function requireDb(respond: GatewayRequestHandlerOptions["respond"]): boolean {
   if (!isDbInitialized()) {
     respond(false, undefined, errorShape(
       ErrorCodes.INVALID_REQUEST,
-      "Multi-tenant mode not enabled. Set OPENCLAW_DB_URL to enable.",
+      "Multi-tenant mode not enabled. Set ENCLAWS_DB_URL to enable.",
     ));
     return false;
   }

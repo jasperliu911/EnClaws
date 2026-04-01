@@ -110,9 +110,9 @@ describe("mergeExecApprovalsSocketDefaults", () => {
 describe("resolve exec approvals defaults", () => {
   it("expands home-prefixed default file and socket paths", () => {
     const dir = makeTempDir();
-    const prevOpenClawHome = process.env.OPENCLAW_HOME;
+    const prevOpenClawHome = process.env.ENCLAWS_HOME;
     try {
-      process.env.OPENCLAW_HOME = dir;
+      process.env.ENCLAWS_HOME = dir;
       expect(path.normalize(resolveExecApprovalsPath())).toBe(
         path.normalize(path.join(dir, ".enclaws", "exec-approvals.json")),
       );
@@ -121,9 +121,9 @@ describe("resolve exec approvals defaults", () => {
       );
     } finally {
       if (prevOpenClawHome === undefined) {
-        delete process.env.OPENCLAW_HOME;
+        delete process.env.ENCLAWS_HOME;
       } else {
-        process.env.OPENCLAW_HOME = prevOpenClawHome;
+        process.env.ENCLAWS_HOME = prevOpenClawHome;
       }
     }
   });

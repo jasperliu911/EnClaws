@@ -232,7 +232,7 @@ describe("sessions_list transcriptPath resolution", () => {
 
   it("resolves cross-agent transcript paths from agent defaults when gateway store path is relative", async () => {
     const stateDir = path.join(os.tmpdir(), "openclaw-state-relative");
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("ENCLAWS_STATE_DIR", stateDir);
 
     try {
       callGatewayMock.mockResolvedValueOnce({
@@ -264,7 +264,7 @@ describe("sessions_list transcriptPath resolution", () => {
 
   it("resolves transcriptPath even when sessions.list does not return a store path", async () => {
     const stateDir = path.join(os.tmpdir(), "openclaw-state-no-path");
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("ENCLAWS_STATE_DIR", stateDir);
 
     try {
       callGatewayMock.mockResolvedValueOnce({
@@ -295,7 +295,7 @@ describe("sessions_list transcriptPath resolution", () => {
 
   it("falls back to agent defaults when gateway path is non-string", async () => {
     const stateDir = path.join(os.tmpdir(), "openclaw-state-non-string-path");
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("ENCLAWS_STATE_DIR", stateDir);
 
     try {
       callGatewayMock.mockResolvedValueOnce({
@@ -327,7 +327,7 @@ describe("sessions_list transcriptPath resolution", () => {
 
   it("falls back to agent defaults when gateway path is '(multiple)'", async () => {
     const stateDir = path.join(os.tmpdir(), "openclaw-state-multiple");
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("ENCLAWS_STATE_DIR", stateDir);
 
     try {
       callGatewayMock.mockResolvedValueOnce({

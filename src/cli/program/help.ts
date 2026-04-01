@@ -54,7 +54,7 @@ export function configureProgramHelp(program: Command, ctx: ProgramContext) {
     )
     .option(
       "--profile <name>",
-      "Use a named profile (isolates OPENCLAW_STATE_DIR/OPENCLAW_CONFIG_PATH under ~/.enclaws-<name>)",
+      "Use a named profile (isolates ENCLAWS_STATE_DIR/ENCLAWS_CONFIG_PATH under ~/.enclaws-<name>)",
     )
     .option(
       "--log-level <level>",

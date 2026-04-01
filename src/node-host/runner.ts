@@ -166,10 +166,10 @@ export async function runNodeHost(opts: NodeHostRunOptions): Promise<void> {
     cfg.nodeHost?.browserProxy?.enabled !== false && resolvedBrowser.enabled;
   const isRemoteMode = cfg.gateway?.mode === "remote";
   const token =
-    process.env.OPENCLAW_GATEWAY_TOKEN?.trim() ||
+    process.env.ENCLAWS_GATEWAY_TOKEN?.trim() ||
     (isRemoteMode ? cfg.gateway?.remote?.token : cfg.gateway?.auth?.token);
   const password =
-    process.env.OPENCLAW_GATEWAY_PASSWORD?.trim() ||
+    process.env.ENCLAWS_GATEWAY_PASSWORD?.trim() ||
     (isRemoteMode ? cfg.gateway?.remote?.password : cfg.gateway?.auth?.password);
 
   const host = gateway.host ?? "127.0.0.1";

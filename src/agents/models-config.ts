@@ -118,7 +118,7 @@ export async function ensureOpenClawModelsJson(
   const agentDir = agentDirOverride?.trim() ? agentDirOverride.trim() : resolveOpenClawAgentDir();
 
   // Skip models.json generation in multi-tenant mode (models come from DB)
-  if (process.env.OPENCLAW_DB_URL || process.env.OPENCLAW_DB_HOST) {
+  if (process.env.ENCLAWS_DB_URL || process.env.ENCLAWS_DB_HOST) {
     return { agentDir, wrote: false };
   }
 

@@ -91,8 +91,8 @@ describe("gateway auth", () => {
       resolveGatewayAuth({
         authConfig: {},
         env: {
-          OPENCLAW_GATEWAY_TOKEN: "env-token",
-          OPENCLAW_GATEWAY_PASSWORD: "env-password",
+          ENCLAWS_GATEWAY_TOKEN: "env-token",
+          ENCLAWS_GATEWAY_PASSWORD: "env-password",
         } as NodeJS.ProcessEnv,
       }),
     ).toMatchObject({
@@ -128,8 +128,8 @@ describe("gateway auth", () => {
           password: "config-password",
         },
         env: {
-          OPENCLAW_GATEWAY_TOKEN: "env-token",
-          OPENCLAW_GATEWAY_PASSWORD: "env-password",
+          ENCLAWS_GATEWAY_TOKEN: "env-token",
+          ENCLAWS_GATEWAY_PASSWORD: "env-password",
         } as NodeJS.ProcessEnv,
       }),
     ).toMatchObject({

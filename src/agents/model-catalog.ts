@@ -3,7 +3,7 @@ import { createSubsystemLogger } from "../logging/subsystem.js";
 import { resolveOpenClawAgentDir } from "./agent-paths.js";
 import { ensureOpenClawModelsJson } from "./models-config.js";
 
-const isMultiTenant = () => !!(process.env.OPENCLAW_DB_URL || process.env.OPENCLAW_DB_HOST);
+const isMultiTenant = () => !!(process.env.ENCLAWS_DB_URL || process.env.ENCLAWS_DB_HOST);
 
 const log = createSubsystemLogger("model-catalog");
 
