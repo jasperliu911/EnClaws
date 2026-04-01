@@ -360,17 +360,13 @@ async function runGatewayCommand(opts: GatewayRunOpts) {
         if (shouldOpenBrowser && !browserOpened) {
           browserOpened = true;
           const cfgSnapshot = loadConfig();
-          const token =
-            cfgSnapshot.gateway?.auth?.token ?? process.env.OPENCLAW_GATEWAY_TOKEN ?? "";
           const links = resolveControlUiLinks({
             port,
             bind: bind === "lan" ? "loopback" : bind,
             customBindHost: cfgSnapshot.gateway?.customBindHost,
             basePath: cfgSnapshot.gateway?.controlUi?.basePath,
           });
-          const dashboardUrl = token
-            ? `${links.httpUrl}#token=${encodeURIComponent(token)}`
-            : links.httpUrl;
+          const dashboardUrl = `${links.httpUrl}login`;
           void openUrl(dashboardUrl).then((opened) => {
             if (!opened) {
               gatewayLog.info(`Open the Control UI manually: ${dashboardUrl}`);

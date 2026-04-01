@@ -331,6 +331,10 @@ export function renderApp(state: AppViewState) {
       : rawDeliveryToSuggestions;
 
   // ---- Global auth gate: require login before accessing the console ----
+  // If the user navigates to /login explicitly, clear any stale auth and force re-login.
+  if (typeof window !== "undefined" && window.location.pathname === "/login") {
+    clearAuth();
+  }
   if (!isAuthenticated()) {
     if (typeof window !== "undefined" && window.location.pathname !== "/login") {
       window.history.replaceState(null, "", "/login");
