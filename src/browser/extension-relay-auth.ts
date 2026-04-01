@@ -3,7 +3,7 @@ import { loadConfig } from "../config/config.js";
 
 const RELAY_TOKEN_CONTEXT = "openclaw-extension-relay-v1";
 const DEFAULT_RELAY_PROBE_TIMEOUT_MS = 500;
-const OPENCLAW_RELAY_BROWSER = "OpenClaw/extension-relay";
+const ENCLAWS_RELAY_BROWSER = "OpenClaw/extension-relay";
 
 function resolveGatewayAuthToken(): string | null {
   const envToken =
@@ -64,7 +64,7 @@ export async function probeAuthenticatedOpenClawRelay(params: {
     }
     const body = (await res.json()) as { Browser?: unknown };
     const browserName = typeof body?.Browser === "string" ? body.Browser.trim() : "";
-    return browserName === OPENCLAW_RELAY_BROWSER;
+    return browserName === ENCLAWS_RELAY_BROWSER;
   } catch {
     return false;
   } finally {
