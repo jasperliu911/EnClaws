@@ -80,6 +80,8 @@ Type: filesandordirs; Name: "{app}"
 const
   WM_SETTINGCHANGE = $001A;
   SMTO_ABORTIFHUNG = $0002;
+var
+  RemoveUserDataOnUninstall: Boolean;
 
 function SendMessageTimeoutW(hWnd: Integer; Msg: Cardinal; wParam: Cardinal;
   lParam: String; fuFlags: Cardinal; uTimeout: Cardinal;
@@ -184,9 +186,42 @@ end;
 
 // Called during uninstall — remove from PATH.
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  ResultCode: Integer;
+  UserDataDir: string;
 begin
+  if CurUninstallStep = usUninstall then
+  begin
+    RemoveUserDataOnUninstall := False;
+    UserDataDir := AddBackslash(GetEnv('USERPROFILE')) + '.enclaws';
+    if DirExists(UserDataDir) then
+    begin
+      RemoveUserDataOnUninstall :=
+        (SuppressibleMsgBox(
+          '是否同时删除用户数据目录？'#13#10#13#10 +
+          UserDataDir + #13#10#13#10 +
+          '选择“是”将删除该目录下的配置、数据库与会话等数据。'#13#10 +
+          '选择“否”将保留这些数据以便后续重装继续使用。',
+          mbConfirmation, MB_YESNO, IDNO) = IDYES);
+    end;
+
+    // Best effort: stop the bundled gateway process so {app} files are not locked.
+    // Target by executable path to avoid killing unrelated Node.js processes.
+    Exec('powershell.exe',
+      '-NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq ''' +
+      ExpandConstant('{app}\node\node.exe') +
+      ''' } | ForEach-Object { try { Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop } catch {} }"',
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  end;
+
   if CurUninstallStep = usPostUninstall then
   begin
+    if RemoveUserDataOnUninstall then
+    begin
+      UserDataDir := AddBackslash(GetEnv('USERPROFILE')) + '.enclaws';
+      DelTree(UserDataDir, True, True, True);
+    end;
+
     RemoveFromUserPath(ExpandConstant('{app}'));
     BroadcastEnvironmentChange;
   end;

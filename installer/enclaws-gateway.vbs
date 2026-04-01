@@ -13,4 +13,5 @@ loadingPage = scriptDir & "\loading.html"
 WshShell.Run """" & loadingPage & """", 1, False
 
 ' Start gateway in background (hidden window, don't wait)
-WshShell.Run """" & nodeExe & """ """ & appEntry & """ gateway", 0, False
+' Use --no-open because loading.html already redirects to dashboard.
+WshShell.Run """" & nodeExe & """ """ & appEntry & """ gateway --no-open", 0, False
