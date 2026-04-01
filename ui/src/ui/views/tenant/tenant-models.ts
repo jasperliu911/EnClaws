@@ -8,6 +8,7 @@
 import { html, css, LitElement, nothing } from "lit";
 import { customElement, state, property } from "lit/decorators.js";
 import { tenantRpc } from "./rpc.ts";
+import { PROVIDER_TYPES as SHARED_PROVIDERS, API_PROTOCOLS as SHARED_PROTOCOLS } from "../../../constants/providers.ts";
 import { t } from "../../../i18n/index.ts";
 import { I18nController } from "../../../i18n/lib/lit-controller.ts";
 
@@ -36,30 +37,8 @@ interface TenantModelConfig {
   createdAt: string;
 }
 
-const PROVIDER_TYPES = [
-  { value: "openai", label: "OpenAI", defaultBaseUrl: "https://api.openai.com/v1", defaultProtocol: "openai-completions" },
-  { value: "anthropic", label: "Anthropic", defaultBaseUrl: "https://api.anthropic.com", defaultProtocol: "anthropic-messages" },
-  { value: "deepseek", label: "DeepSeek", defaultBaseUrl: "https://api.deepseek.com/v1", defaultProtocol: "openai-completions" },
-  { value: "qwen", label: "Qwen (通义千问)", defaultBaseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1", defaultProtocol: "openai-completions" },
-  { value: "zhipu", label: "ZAI (智谱)", defaultBaseUrl: "https://open.bigmodel.cn/api/paas/v4", defaultProtocol: "openai-completions" },
-  { value: "moonshot", label: "Moonshot (月之暗面)", defaultBaseUrl: "https://api.moonshot.ai/v1", defaultProtocol: "openai-completions" },
-  { value: "minimax", label: "MiniMax", defaultBaseUrl: "https://api.minimax.chat/v1", defaultProtocol: "openai-completions" },
-  { value: "siliconflow", label: "SiliconFlow (硅基流动)", defaultBaseUrl: "https://api.siliconflow.cn/v1", defaultProtocol: "openai-completions" },
-  { value: "google", label: "Google Gemini", defaultBaseUrl: "", defaultProtocol: "google-generative-ai" },
-  { value: "bedrock", label: "AWS Bedrock", defaultBaseUrl: "", defaultProtocol: "bedrock-converse-stream" },
-  { value: "ollama", label: "Ollama", defaultBaseUrl: "http://localhost:11434", defaultProtocol: "ollama" },
-  { value: "openrouter", label: "OpenRouter", defaultBaseUrl: "https://openrouter.ai/api/v1", defaultProtocol: "openai-completions" },
-  { value: "custom", label: "Custom", defaultBaseUrl: "", defaultProtocol: "openai-completions" },
-] as const;
-
-const API_PROTOCOLS = [
-  { value: "openai-completions", label: "OpenAI Completions" },
-  { value: "openai-responses", label: "OpenAI Responses" },
-  { value: "anthropic-messages", label: "Anthropic Messages" },
-  { value: "google-generative-ai", label: "Google Generative AI" },
-  { value: "bedrock-converse-stream", label: "AWS Bedrock" },
-  { value: "ollama", label: "Ollama" },
-] as const;
+const PROVIDER_TYPES = SHARED_PROVIDERS;
+const API_PROTOCOLS = SHARED_PROTOCOLS;
 
 @customElement("tenant-models-view")
 export class TenantModelsView extends LitElement {

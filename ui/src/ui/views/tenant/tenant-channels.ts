@@ -10,6 +10,7 @@ import { customElement, state, property } from "lit/decorators.js";
 import { t, I18nController } from "../../../i18n/index.ts";
 import { tenantRpc } from "./rpc.ts";
 import { pathForTab, inferBasePathFromPathname } from "../../navigation.ts";
+import { CHANNEL_TYPES } from "../../../constants/channels.ts";
 import feishuScopes from "./feishu-scopes.json";
 
 type ChannelPolicy = "open" | "allowlist" | "disabled";
@@ -333,17 +334,7 @@ export class TenantChannelsView extends LitElement {
   }
 
   private get channelTypes() {
-    return [
-      { value: "telegram", label: "Telegram" },
-      { value: "discord", label: "Discord" },
-      { value: "slack", label: "Slack" },
-      { value: "whatsapp", label: "WhatsApp" },
-      { value: "feishu", label: t("tenantChannels.channelFeishu") },
-      { value: "dingtalk", label: t("tenantChannels.channelDingtalk") },
-      { value: "wechat", label: t("tenantChannels.channelWechat") },
-      { value: "wecom", label: t("tenantChannels.channelWecom") },
-      { value: "web", label: t("tenantChannels.channelWeb") },
-    ];
+    return CHANNEL_TYPES.map((c) => ({ value: c.value, label: t(c.labelKey) }));
   }
 
   private get policyOptions(): { value: ChannelPolicy; label: string }[] {

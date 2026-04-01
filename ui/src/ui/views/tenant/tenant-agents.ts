@@ -13,6 +13,7 @@ import { customElement, state, property } from "lit/decorators.js";
 import { t, I18nController } from "../../../i18n/index.ts";
 import { tenantRpc } from "./rpc.ts";
 import { pathForTab, inferBasePathFromPathname } from "../../navigation.ts";
+import { CHANNEL_ICON_MAP } from "../../../constants/channels.ts";
 
 
 interface ModelConfigEntry {
@@ -1051,13 +1052,7 @@ export class TenantAgentsView extends LitElement {
     if (this.agentChannels.length === 0) {
       return html`<div class="empty">${t("tenantAgents.noChannels")}</div>`;
     }
-    const iconMap: Record<string, string> = {
-      feishu: "/feishu-logo.svg",
-      wechat: "/wechat-logo.svg",
-      dingtalk: "/dingtalk-logo.svg",
-      slack: "/slack-logo.svg",
-      web: "/webchat-logo.svg",
-    };
+    const iconMap = CHANNEL_ICON_MAP;
     return html`
       <div class="channel-list">
         ${this.agentChannels.map(ch => html`

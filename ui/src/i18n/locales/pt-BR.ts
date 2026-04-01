@@ -1,6 +1,14 @@
 import type { TranslationMap } from "../lib/types.ts";
 
 export const pt_BR: TranslationMap = {
+  channels: {
+    feishu: "Feishu",
+    dingtalk: "DingTalk",
+    wecom: "WeCom",
+    telegram: "Telegram",
+    whatsapp: "WhatsApp",
+    discord: "Discord",
+  },
   common: {
     version: "Versão",
     health: "Saúde",
@@ -226,10 +234,14 @@ export const pt_BR: TranslationMap = {
     confirmSkip: "Pular",
     channels: {
       feishu: "Feishu",
-      wechat: "WeChat",
       dingtalk: "DingTalk",
+      wechat: "WeChat",
+      wecom: "WeCom",
       slack: "Slack",
-      webchat: "WebChat",
+      telegram: "Telegram",
+      discord: "Discord",
+      whatsapp: "WhatsApp",
+      web: "Web",
     },
   },
   chat: {
