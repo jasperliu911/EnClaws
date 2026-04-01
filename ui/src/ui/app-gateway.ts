@@ -13,7 +13,7 @@ import {
 } from "./app-settings.ts";
 import { handleAgentEvent, resetToolStream, type AgentEventPayload } from "./app-tool-stream.ts";
 import type { OpenClawApp } from "./app.ts";
-import { setRefreshClient } from "./auth-store.ts";
+import { setRefreshClient, isAuthenticated, refreshAccessToken, clearAuth } from "./auth-store.ts";
 import { shouldReloadHistoryForFinalEvent } from "./chat-event-reload.ts";
 import { loadAgents, loadToolsCatalog } from "./controllers/agents.ts";
 import { loadAssistantIdentity } from "./controllers/assistant-identity.ts";
@@ -170,6 +170,17 @@ export function connectGateway(host: GatewayHost) {
       (host as unknown as { chatStream: string | null }).chatStream = null;
       (host as unknown as { chatStreamStartedAt: number | null }).chatStreamStartedAt = null;
       resetToolStream(host as unknown as Parameters<typeof resetToolStream>[0]);
+      // Verify auth is still valid after reconnect (refresh token may have been revoked on restart)
+      if (isAuthenticated()) {
+        void refreshAccessToken().then((result) => {
+          if (!result) {
+            clearAuth();
+            if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+              window.location.href = "/login";
+            }
+          }
+        });
+      }
       void loadAssistantIdentity(host as unknown as OpenClawApp);
       void loadAgents(host as unknown as OpenClawApp);
       void loadToolsCatalog(host as unknown as OpenClawApp);
