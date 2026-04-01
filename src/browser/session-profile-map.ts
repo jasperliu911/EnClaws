@@ -8,7 +8,7 @@
  * once an agent logs in with a session-specific profile, subsequent runs
  * reuse the same profile and retain cookies/localStorage/session state.
  *
- * Storage: ~/.openclaw/session-profiles.json (lightweight JSON file)
+ * Storage: ~/.enclaws/session-profiles.json (lightweight JSON file)
  * Thread-safety: single-process in-memory cache with async file write.
  *
  * Design mirrors agent-browser's --session / --profile persistence concept.
@@ -20,7 +20,7 @@ import os from "node:os";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MAP_FILE = path.join(os.homedir(), ".openclaw", "session-profiles.json");
+const MAP_FILE = path.join(os.homedir(), ".enclaws", "session-profiles.json");
 
 /**
  * Prefix for auto-created session profiles.
