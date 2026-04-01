@@ -217,7 +217,7 @@ function buildExecExtraEnv(options?: {
       if (creds?.appId) env.FEISHU_APP_ID = creds.appId;
       if (creds?.appSecret) env.FEISHU_APP_SECRET = creds.appSecret;
     } catch {
-      // Non-fatal — skill scripts fall back to config.json / openclaw.json
+      // Non-fatal — skill scripts fall back to config.json / enclaws.json
     }
   }
 

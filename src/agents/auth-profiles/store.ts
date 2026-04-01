@@ -109,7 +109,7 @@ export async function updateAuthProfileStoreWithLock(params: {
  */
 function normalizeRawCredentialEntry(raw: Record<string, unknown>): Partial<AuthProfileCredential> {
   const entry = { ...raw } as Record<string, unknown>;
-  // mode → type alias (openclaw.json uses "mode"; auth-profiles.json uses "type")
+  // mode → type alias (enclaws.json uses "mode"; auth-profiles.json uses "type")
   if (!("type" in entry) && typeof entry["mode"] === "string") {
     entry["type"] = entry["mode"];
   }

@@ -534,7 +534,7 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
       dbChannelsCache = merged;
       // Propagate DB-enriched config to the global loadConfig() singleton so that
       // all code paths (e.g. gateway send handler) resolve channel credentials from
-      // the database rather than falling back to the base openclaw.json config.
+      // the database rather than falling back to the base enclaws.json config.
       setRuntimeConfigSnapshot(merged);
     } catch (err) {
       console.error("[server-channels] failed to load DB channels:", err);

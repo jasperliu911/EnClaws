@@ -369,7 +369,7 @@ export function createBrowserTool(opts?: {
         } catch (err) {
           const msg = String(err);
           if (p === "chrome" && (msg.includes("no tab is connected") || msg.includes("404:"))) {
-            // Attempt auto-failover to openclaw if chrome fails due to no tab or connection
+            // Attempt auto-failover to enclaws if chrome fails due to no tab or connection
             console.warn(`[BrowserTool] Auto-failover from chrome to openclaw due to: ${msg}`);
             const result = await fn("openclaw");
             const hint =
