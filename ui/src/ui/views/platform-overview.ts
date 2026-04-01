@@ -1,5 +1,5 @@
 /**
- * Platform overview dashboard — platform-level statistics with mock data.
+ * Platform overview dashboard — platform-level statistics.
  *
  * Shows tenant count, token usage trends, LLM interaction stats,
  * channel distribution, agent activity, and user activity.
@@ -372,6 +372,9 @@ export class PlatformOverviewView extends LitElement {
   }
 
   private async loadAll() {
+    this.trendChart?.dispose(); this.trendChart = null;
+    this.llmPieChart?.dispose(); this.llmPieChart = null;
+    this.channelPieChart?.dispose(); this.channelPieChart = null;
     this.loading = true;
     await Promise.all([
       this.loadSummary(),
@@ -449,15 +452,13 @@ export class PlatformOverviewView extends LitElement {
     if (changed.has("period")) { void this.loadTrend(); }
     if (changed.has("rankPeriod")) { void this.loadRank(); }
     if (changed.has("llmPeriod")) { void this.loadLlmStats(); }
+    // Init charts if not yet created (e.g. after loading state clears)
+    if (!this.trendChart) this.initTrendChart();
+    if (!this.llmPieChart) this.initLlmPieChart();
+    if (!this.channelPieChart) this.initChannelPieChart();
     // Re-render charts on data/locale changes
     this.updateTrendChart();
     this.updateLlmPieChart();
-  }
-
-  protected firstUpdated() {
-    this.initTrendChart();
-    this.initLlmPieChart();
-    this.initChannelPieChart();
   }
 
   private initTrendChart() {
@@ -569,6 +570,9 @@ export class PlatformOverviewView extends LitElement {
   }
 
   private renderTrendChart() {
+    if (this.trend.length === 0) {
+      return html`<div class="chart-container" style="display:grid;place-items:center;color:var(--text-muted,#525252);font-size:0.8rem">${t("platformOverview.noData")}</div>`;
+    }
     return html`<div class="chart-container"></div>`;
   }
 
@@ -701,6 +705,7 @@ export class PlatformOverviewView extends LitElement {
   }
 
   render() {
+    if (this.loading) return html`<div style="text-align:center;padding:3rem;color:var(--text-muted,#525252)">${t("platformOverview.refresh")}...</div>`;
     const s = this.summary;
     const ua = this.userActivity;
     return html`
@@ -831,11 +836,11 @@ export class PlatformOverviewView extends LitElement {
                 <div class="llm-stat-label">${t("platformOverview.conversationTurns")}</div>
               </div>
               <div class="llm-stat-card">
-                <div class="llm-stat-value">${llm ? (llm.avgDurationMs / 1000).toFixed(1) + "s" : "-"}</div>
+                <div class="llm-stat-value">${llm ? parseFloat((llm.avgDurationMs / 1000).toFixed(1)) + "s" : "-"}</div>
                 <div class="llm-stat-label">${t("platformOverview.avgResponseTime")}</div>
               </div>
               <div class="llm-stat-card">
-                <div class="llm-stat-value error-color">${llm ? llm.errorRate + "%" : "-"}</div>
+                <div class="llm-stat-value error-color">${llm ? parseFloat(llm.errorRate.toFixed(1)) + "%" : "-"}</div>
                 <div class="llm-stat-label">${t("platformOverview.errorRate")}</div>
               </div>
               <div class="llm-stat-card">
@@ -845,7 +850,9 @@ export class PlatformOverviewView extends LitElement {
             </div>
           </div>
           <div>
-            <div class="llm-pie-container"></div>
+            ${(llm?.modelDistribution?.length ?? 0) > 0
+              ? html`<div class="llm-pie-container"></div>`
+              : html`<div class="llm-pie-container" style="display:grid;place-items:center;color:var(--text-muted,#525252);font-size:0.8rem">${t("platformOverview.noData")}</div>`}
           </div>
         </div>
       </div>
@@ -855,7 +862,9 @@ export class PlatformOverviewView extends LitElement {
       <div class="two-col">
         <div class="section">
           <h3 class="section-title">${t("platformOverview.channelDistribution")}</h3>
-          <div class="channel-pie-container"></div>
+          ${this.channels.length > 0
+            ? html`<div class="channel-pie-container"></div>`
+            : html`<div class="channel-pie-container" style="display:grid;place-items:center;color:var(--text-muted,#525252);font-size:0.8rem">${t("platformOverview.noData")}</div>`}
         </div>
         <div class="section">
           <h3 class="section-title">${t("platformOverview.userActivity")}</h3>

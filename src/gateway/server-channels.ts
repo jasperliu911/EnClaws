@@ -359,7 +359,9 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
       const merged = { ...baseCfg, channels: {} } as OpenClawConfig & {
         channels: Record<string, unknown>;
       };
-      const bindings = Array.isArray(baseCfg.bindings) ? [...baseCfg.bindings] : [];
+      // Start with empty bindings — they are rebuilt entirely from DB each time.
+      // Do NOT inherit from baseCfg.bindings (which may contain stale entries from previous reload).
+      const bindings: Array<{ agentId: string; match: Record<string, unknown> }> = [];
 
       // Build a map from channel_app DB id → { channelType, appId } for binding resolution
       const channelAppIdToInfo = new Map<string, { channelType: string; appId: string }>();

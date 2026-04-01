@@ -844,6 +844,7 @@ export const tenantChannelsHandlers: GatewayRequestHandlers = {
       botName,
       groupPolicy: groupPolicy as ChannelPolicy | undefined,
       isActive,
+      ...(bindAgentId !== undefined ? { agentId: bindAgentId || null } : {}),
     });
 
     if (!updated) {
@@ -859,7 +860,11 @@ export const tenantChannelsHandlers: GatewayRequestHandlers = {
       const secretChanged = oldApp.appSecret !== updated.appSecret;
       const activeChanged = oldApp.isActive !== updated.isActive;
       const policyChanged = oldApp.groupPolicy !== updated.groupPolicy;
+      const agentChanged = bindAgentId !== undefined;
+      // Agent change only needs config reload (no reconnect) — current sessions finish with old agent,
+      // new messages pick up the new agent via fresh route resolution.
       const needsReconnect = appIdChanged || secretChanged || activeChanged || policyChanged;
+      const needsConfigReload = agentChanged;
 
       if (!needsReconnect) {
         // Nothing connection-relevant changed (e.g. only botName) — just reload config
@@ -889,16 +894,9 @@ export const tenantChannelsHandlers: GatewayRequestHandlers = {
       }
     }
 
-    // Bind/unbind agent
-    if (bindAgentId !== undefined) {
-      try {
-        await updateChannelApp(appDbId, ctx.tenantId, { agentId: bindAgentId || null });
-        invalidateTenantConfigCache(ctx.tenantId);
-        await context.reloadDbChannels();
-      } catch (bindErr: unknown) {
-        console.warn(`[apps.update] Bind agent ${bindAgentId} failed: ${bindErr instanceof Error ? bindErr.message : "unknown"}`);
-      }
-    } else if (agentConfig) {
+    // Agent binding was already written in the unified updateChannelApp call above,
+    // and connection restart is handled by the needsReconnect logic when agentChanged=true.
+    if (!bindAgentId && agentConfig) {
       // Legacy: Update linked agent if agentConfig provided (backward compat)
       const currentApp = (await listChannelApps(channelForApp.id)).find((a) => a.id === appDbId);
       const allAgents = await listTenantAgents(ctx.tenantId, { activeOnly: false });

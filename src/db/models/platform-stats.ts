@@ -69,12 +69,12 @@ export async function getTokenRank(period: "all" | "month" | "today" = "all", li
       [limit],
     ),
     query(
-      `SELECT COALESCE(us.display_name, us.email, us.id::text) AS name, t.name AS tenant_name, SUM(u.input_tokens + u.output_tokens) AS tokens
+      `SELECT COALESCE(us.display_name, us.email, u.user_id) AS name, t.name AS tenant_name, SUM(u.input_tokens + u.output_tokens) AS tokens
        FROM usage_records u
-       JOIN users us ON u.user_id = us.id
+       LEFT JOIN users us ON us.tenant_id = u.tenant_id AND (u.user_id = us.id::text OR u.user_id = us.union_id)
        JOIN tenants t ON u.tenant_id = t.id
-       WHERE ${cond} AND t.slug != '_platform'
-       GROUP BY u.user_id, us.display_name, us.email, us.id, t.name ORDER BY tokens DESC LIMIT $1`,
+       WHERE ${cond} AND t.slug != '_platform' AND u.user_id IS NOT NULL
+       GROUP BY u.user_id, us.display_name, us.email, t.name ORDER BY tokens DESC LIMIT $1`,
       [limit],
     ),
     query(
@@ -137,7 +137,10 @@ export async function getChannelDistribution() {
   if (getDbType() === DB_SQLITE) return sqliteStats.getChannelDistribution();
 
   const result = await query(
-    "SELECT channel_type AS type, COUNT(*) AS count FROM tenant_channels WHERE is_active = true GROUP BY channel_type ORDER BY count DESC",
+    `SELECT tc.channel_type AS type, COUNT(ca.id) AS count
+     FROM tenant_channels tc LEFT JOIN tenant_channel_apps ca ON ca.channel_id = tc.id
+     WHERE tc.is_active = true
+     GROUP BY tc.channel_type ORDER BY count DESC`,
   );
   return result.rows.map((r) => ({ type: r.type as string, count: parseInt(String(r.count), 10) }));
 }
