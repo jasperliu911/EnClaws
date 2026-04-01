@@ -9,7 +9,7 @@
 import { loadSettings } from "./storage.ts";
 import { generateUUID } from "./uuid.ts";
 
-const AUTH_KEY = "openclaw.auth.v1";
+const AUTH_KEY = "enclaws.auth.v1";
 
 // ── Shared gateway client for token refresh ──────────────────
 // Set by app-gateway.ts when the main connection is established.
