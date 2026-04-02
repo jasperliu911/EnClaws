@@ -307,7 +307,7 @@ echo "[OK] Dependencies installed (target: darwin-${TARGET_NPM_ARCH})"
 
 echo "[*] Cleaning up..."
 CLEAN_NAMES=("*.md" "CHANGELOG*" "HISTORY*" ".github" "test" "tests" "__tests__" \
-  "example" "examples" ".travis.yml" ".eslintrc*" ".prettierrc*" "tsconfig.json" "*.map" "doc" "docs")
+  "example" "examples" ".travis.yml" ".eslintrc*" ".prettierrc*" "tsconfig.json" "*.map")
 for name in "${CLEAN_NAMES[@]}"; do
   find "$APP_RESOURCES/node_modules" -maxdepth 3 -name "$name" -exec rm -rf {} + 2>/dev/null || true
 done
