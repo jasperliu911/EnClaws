@@ -26,8 +26,8 @@ export function addGatewayClientOptions(cmd: Command) {
  * cron operations to the correct tenant store.
  */
 function resolveTenantParamsFromEnv(): Record<string, string> {
-  const tenantId = process.env.OPENCLAW_TENANT_ID?.trim();
-  const tenantUserId = process.env.OPENCLAW_TENANT_USER_ID?.trim();
+  const tenantId = process.env.ENCLAWS_TENANT_ID?.trim();
+  const tenantUserId = process.env.ENCLAWS_TENANT_USER_ID?.trim();
   if (tenantId && tenantUserId) {
     return { _tenantId: tenantId, _tenantUserId: tenantUserId };
   }

@@ -149,13 +149,13 @@ describe("chrome extension relay server", () => {
 
   beforeEach(() => {
     envSnapshot = captureEnv([
-      "OPENCLAW_GATEWAY_TOKEN",
-      "OPENCLAW_EXTENSION_RELAY_RECONNECT_GRACE_MS",
-      "OPENCLAW_EXTENSION_RELAY_COMMAND_RECONNECT_WAIT_MS",
+      "ENCLAWS_GATEWAY_TOKEN",
+      "ENCLAWS_EXTENSION_RELAY_RECONNECT_GRACE_MS",
+      "ENCLAWS_EXTENSION_RELAY_COMMAND_RECONNECT_WAIT_MS",
     ]);
-    process.env.OPENCLAW_GATEWAY_TOKEN = TEST_GATEWAY_TOKEN;
-    delete process.env.OPENCLAW_EXTENSION_RELAY_RECONNECT_GRACE_MS;
-    delete process.env.OPENCLAW_EXTENSION_RELAY_COMMAND_RECONNECT_WAIT_MS;
+    process.env.ENCLAWS_GATEWAY_TOKEN = TEST_GATEWAY_TOKEN;
+    delete process.env.ENCLAWS_EXTENSION_RELAY_RECONNECT_GRACE_MS;
+    delete process.env.ENCLAWS_EXTENSION_RELAY_COMMAND_RECONNECT_WAIT_MS;
   });
 
   afterEach(async () => {
@@ -442,7 +442,7 @@ describe("chrome extension relay server", () => {
   });
 
   it("closes CDP clients after reconnect grace when extension stays disconnected", async () => {
-    process.env.OPENCLAW_EXTENSION_RELAY_RECONNECT_GRACE_MS = "150";
+    process.env.ENCLAWS_EXTENSION_RELAY_RECONNECT_GRACE_MS = "150";
 
     const { port, ext } = await startRelayWithExtension();
     const cdp = new WebSocket(`ws://127.0.0.1:${port}/cdp`, {

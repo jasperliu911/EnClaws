@@ -49,7 +49,7 @@ describe("findExtraGatewayServices (win32)", () => {
       code: 0,
       stdout: [
         "TaskName: OpenClaw Gateway",
-        "Task To Run: C:\\Program Files\\OpenClaw\\openclaw.exe gateway run",
+        "Task To Run: C:\\Program Files\\OpenClaw.enclaws.exe gateway run",
         "",
         "TaskName: Clawdbot Legacy",
         "Task To Run: C:\\clawdbot\\clawdbot.exe run",

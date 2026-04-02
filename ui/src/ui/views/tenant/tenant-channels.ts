@@ -10,6 +10,7 @@ import { customElement, state, property } from "lit/decorators.js";
 import { t, I18nController } from "../../../i18n/index.ts";
 import { tenantRpc } from "./rpc.ts";
 import { pathForTab, inferBasePathFromPathname } from "../../navigation.ts";
+import { CHANNEL_TYPES } from "../../../constants/channels.ts";
 import feishuScopes from "./feishu-scopes.json";
 
 type ChannelPolicy = "open" | "allowlist" | "disabled";
@@ -291,7 +292,7 @@ export class TenantChannelsView extends LitElement {
   @state() private scopesCopied = false;
 
   // Form fields
-  @state() private formChannelType = "web";
+  @state() private formChannelType = CHANNEL_TYPES[0]?.value ?? "feishu";
   @state() private formChannelName = "";
   @state() private formChannelPolicy: ChannelPolicy = "open";
   @state() private formApps: ChannelApp[] = [];
@@ -333,17 +334,7 @@ export class TenantChannelsView extends LitElement {
   }
 
   private get channelTypes() {
-    return [
-      { value: "telegram", label: "Telegram" },
-      { value: "discord", label: "Discord" },
-      { value: "slack", label: "Slack" },
-      { value: "whatsapp", label: "WhatsApp" },
-      { value: "feishu", label: t("tenantChannels.channelFeishu") },
-      { value: "dingtalk", label: t("tenantChannels.channelDingtalk") },
-      { value: "wechat", label: t("tenantChannels.channelWechat") },
-      { value: "wecom", label: t("tenantChannels.channelWecom") },
-      { value: "web", label: t("tenantChannels.channelWeb") },
-    ];
+    return CHANNEL_TYPES.map((c) => ({ value: c.value, label: t(c.labelKey) }));
   }
 
   private get policyOptions(): { value: ChannelPolicy; label: string }[] {
@@ -408,7 +399,7 @@ export class TenantChannelsView extends LitElement {
 
   private startCreate() {
     this.editingId = null;
-    this.formChannelType = "web";
+    this.formChannelType = CHANNEL_TYPES[0]?.value ?? "feishu";
     this.formChannelName = "";
     this.formChannelPolicy = "open";
     this.formApps = [];
@@ -566,7 +557,8 @@ export class TenantChannelsView extends LitElement {
 
     // Validate apps
     const appIds = new Set<string>();
-    for (const app of this.formApps) {
+    for (let i = 0; i < this.formApps.length; i++) {
+      const app = this.formApps[i];
       if (!app.appId) {
         this.showError("tenantChannels.appIdRequired");
         return;
@@ -576,6 +568,10 @@ export class TenantChannelsView extends LitElement {
         return;
       }
       appIds.add(app.appId);
+      if (!app.formAgentBinding) {
+        this.showError("tenantChannels.agentRequired", { name: app.botName || app.appId });
+        return;
+      }
     }
 
     this.saving = true;
@@ -613,7 +609,7 @@ export class TenantChannelsView extends LitElement {
               appSecret: app.appSecret,
               botName: app.botName,
               groupPolicy: app.groupPolicy,
-              ...(app.formAgentBinding ? { agentId: app.formAgentBinding } : {}),
+              agentId: app.formAgentBinding || null,
             });
           } else {
             await this.rpc("tenant.channels.apps.add", {
@@ -622,7 +618,7 @@ export class TenantChannelsView extends LitElement {
               appSecret: app.appSecret,
               botName: app.botName,
               groupPolicy: app.groupPolicy,
-              ...(app.formAgentBinding ? { agentId: app.formAgentBinding } : {}),
+              agentId: app.formAgentBinding || null,
             });
           }
         }
@@ -639,7 +635,7 @@ export class TenantChannelsView extends LitElement {
             appSecret: a.appSecret,
             botName: a.botName,
             groupPolicy: a.groupPolicy,
-            ...(a.formAgentBinding ? { agentId: a.formAgentBinding } : {}),
+            agentId: a.formAgentBinding || null,
           })),
         });
         this.showSuccess("tenantChannels.channelCreated", { name: this.formChannelName });
@@ -651,6 +647,8 @@ export class TenantChannelsView extends LitElement {
       this.clearAllFeishuTimers();
       this.showForm = false;
       await this.loadChannels();
+      // Refresh again after delay to pick up connection status from runtime
+      setTimeout(() => this.loadChannels(), 3000);
       if (scannedAppId) {
         this.feishuAuthGuideAppId = scannedAppId;
       }

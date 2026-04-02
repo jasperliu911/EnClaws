@@ -108,7 +108,7 @@ describe("pw-tools-core", () => {
       expect(typeof savedPath).toBe("string");
       expect(savedPath).not.toBe(targetPath);
       expect(path.dirname(String(savedPath))).toBe(tempDir);
-      expect(path.basename(String(savedPath))).toContain(".openclaw-output-");
+      expect(path.basename(String(savedPath))).toContain(".enclaws-output-");
       expect(path.basename(String(savedPath))).toContain(".part");
       expect(await fs.readFile(targetPath, "utf8")).toBe("file-content");
       expect(res.path).toBe(targetPath);
@@ -150,7 +150,7 @@ describe("pw-tools-core", () => {
       expect(typeof savedPath).toBe("string");
       expect(savedPath).not.toBe(targetPath);
       expect(path.dirname(String(savedPath))).toBe(tempDir);
-      expect(path.basename(String(savedPath))).toContain(".openclaw-output-");
+      expect(path.basename(String(savedPath))).toContain(".enclaws-output-");
       expect(path.basename(String(savedPath))).toContain(".part");
       expect(await fs.readFile(targetPath, "utf8")).toBe("report-content");
       expect(res.path).toBe(targetPath);

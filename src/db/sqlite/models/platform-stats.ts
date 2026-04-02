@@ -68,14 +68,14 @@ export function getTokenRank(period: "all" | "month" | "today", limit: number) {
 
   // User rank
   const users = sqliteQuery(
-    `SELECT us.display_name AS name, t.name AS tenant_name, SUM(u.input_tokens + u.output_tokens) AS tokens
+    `SELECT COALESCE(us.display_name, us.email, u.user_id) AS name, t.name AS tenant_name, SUM(u.input_tokens + u.output_tokens) AS tokens
      FROM usage_records u
-     JOIN users us ON u.user_id = us.id
+     LEFT JOIN users us ON us.tenant_id = u.tenant_id AND (u.user_id = us.id OR u.user_id = us.union_id)
      JOIN tenants t ON u.tenant_id = t.id
-     WHERE ${cond} AND t.slug != '_platform'
+     WHERE ${cond} AND t.slug != '_platform' AND u.user_id IS NOT NULL
      GROUP BY u.user_id ORDER BY tokens DESC LIMIT ?`,
     [limit],
-  ).rows.map((r: any) => ({ name: (r.name || r.tenant_name) as string, tenantName: r.tenant_name as string, tokens: Number(r.tokens) }));
+  ).rows.map((r: any) => ({ name: (r.name as string) || "-", tenantName: (r.tenant_name as string) || "-", tokens: Number(r.tokens) }));
 
   // Model rank
   const modelRows = sqliteQuery(
@@ -135,7 +135,10 @@ export function getLlmStats(period: "all" | "month" | "today") {
 
 export function getChannelDistribution() {
   return sqliteQuery(
-    `SELECT channel_type AS type, COUNT(*) AS count FROM tenant_channels WHERE is_active = 1 GROUP BY channel_type ORDER BY count DESC`
+    `SELECT tc.channel_type AS type, COUNT(ca.id) AS count
+     FROM tenant_channels tc LEFT JOIN tenant_channel_apps ca ON ca.channel_id = tc.id
+     WHERE tc.is_active = 1
+     GROUP BY tc.channel_type ORDER BY count DESC`
   ).rows.map((r: any) => ({ type: r.type as string, count: Number(r.count) }));
 }
 

@@ -53,7 +53,7 @@ const withClearedEnv = <T>(
 
 beforeAll(async () => {
   tempHome = await createTempHomeEnv("openclaw-skills-home-");
-  await fs.mkdir(path.join(tempHome.home, ".openclaw", "agents", "main", "sessions"), {
+  await fs.mkdir(path.join(tempHome.home, ".enclaws", "agents", "main", "sessions"), {
     recursive: true,
   });
 });

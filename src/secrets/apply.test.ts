@@ -31,14 +31,14 @@ describe("secrets apply", () => {
 
   beforeEach(async () => {
     rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-secrets-apply-"));
-    stateDir = path.join(rootDir, ".openclaw");
+    stateDir = path.join(rootDir, ".enclaws");
     configPath = path.join(stateDir, "openclaw.json");
     authStorePath = path.join(stateDir, "agents", "main", "agent", "auth-profiles.json");
     authJsonPath = path.join(stateDir, "agents", "main", "agent", "auth.json");
     envPath = path.join(stateDir, ".env");
     env = {
-      OPENCLAW_STATE_DIR: stateDir,
-      OPENCLAW_CONFIG_PATH: configPath,
+      ENCLAWS_STATE_DIR: stateDir,
+      ENCLAWS_CONFIG_PATH: configPath,
       OPENAI_API_KEY: "sk-live-env",
     };
 

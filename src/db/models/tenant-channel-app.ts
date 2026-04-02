@@ -15,6 +15,7 @@ function rowToApp(row: Record<string, unknown>): TenantChannelApp {
     appSecret: row.app_secret as string,
     botName: row.bot_name as string,
     groupPolicy: (row.group_policy as ChannelPolicy) ?? "open",
+    agentId: (row.agent_id as string) ?? null,
     isActive: row.is_active as boolean,
     createdAt: row.created_at as Date,
     updatedAt: row.updated_at as Date,
@@ -28,11 +29,12 @@ export async function createChannelApp(params: {
   appSecret?: string;
   botName?: string;
   groupPolicy?: ChannelPolicy;
+  agentId?: string | null;
 }): Promise<TenantChannelApp> {
   if (getDbType() === DB_SQLITE) return sqliteChannelApp.createChannelApp(params);
   const result = await query(
-    `INSERT INTO tenant_channel_apps (channel_id, tenant_id, app_id, app_secret, bot_name, group_policy)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO tenant_channel_apps (channel_id, tenant_id, app_id, app_secret, bot_name, group_policy, agent_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING *`,
     [
       params.channelId,
@@ -41,6 +43,7 @@ export async function createChannelApp(params: {
       params.appSecret ?? "",
       params.botName ?? "",
       params.groupPolicy ?? "open",
+      params.agentId ?? null,
     ],
   );
   return rowToApp(result.rows[0]);
@@ -58,7 +61,7 @@ export async function listChannelApps(channelId: string): Promise<TenantChannelA
 export async function updateChannelApp(
   appDbId: string,
   tenantId: string,
-  updates: Partial<Pick<TenantChannelApp, "appId" | "appSecret" | "botName" | "groupPolicy" | "isActive">>,
+  updates: Partial<Pick<TenantChannelApp, "appId" | "appSecret" | "botName" | "groupPolicy" | "agentId" | "isActive">>,
 ): Promise<TenantChannelApp | null> {
   if (getDbType() === DB_SQLITE) return sqliteChannelApp.updateChannelApp(appDbId, tenantId, updates);
   const sets: string[] = [];
@@ -80,6 +83,10 @@ export async function updateChannelApp(
   if (updates.groupPolicy !== undefined) {
     sets.push(`group_policy = $${idx++}`);
     values.push(updates.groupPolicy);
+  }
+  if (updates.agentId !== undefined) {
+    sets.push(`agent_id = $${idx++}`);
+    values.push(updates.agentId);
   }
   if (updates.isActive !== undefined) {
     sets.push(`is_active = $${idx++}`);

@@ -148,7 +148,7 @@ describe("security audit", () => {
     await fs.rm(credentialsDir, { recursive: true, force: true });
     await fs.mkdir(credentialsDir, { recursive: true, mode: 0o700 });
     await withEnvAsync(
-      { OPENCLAW_STATE_DIR: channelSecurityStateDir },
+      { ENCLAWS_STATE_DIR: channelSecurityStateDir },
       async () => await fn(channelSecurityStateDir),
     );
   };
@@ -190,10 +190,10 @@ describe("security audit", () => {
 
   it("flags non-loopback bind without auth as critical", async () => {
     // Clear env tokens so resolveGatewayAuth defaults to mode=none
-    const prevToken = process.env.OPENCLAW_GATEWAY_TOKEN;
-    const prevPassword = process.env.OPENCLAW_GATEWAY_PASSWORD;
-    delete process.env.OPENCLAW_GATEWAY_TOKEN;
-    delete process.env.OPENCLAW_GATEWAY_PASSWORD;
+    const prevToken = process.env.ENCLAWS_GATEWAY_TOKEN;
+    const prevPassword = process.env.ENCLAWS_GATEWAY_PASSWORD;
+    delete process.env.ENCLAWS_GATEWAY_TOKEN;
+    delete process.env.ENCLAWS_GATEWAY_PASSWORD;
 
     try {
       const cfg: OpenClawConfig = {
@@ -209,14 +209,14 @@ describe("security audit", () => {
     } finally {
       // Restore env
       if (prevToken === undefined) {
-        delete process.env.OPENCLAW_GATEWAY_TOKEN;
+        delete process.env.ENCLAWS_GATEWAY_TOKEN;
       } else {
-        process.env.OPENCLAW_GATEWAY_TOKEN = prevToken;
+        process.env.ENCLAWS_GATEWAY_TOKEN = prevToken;
       }
       if (prevPassword === undefined) {
-        delete process.env.OPENCLAW_GATEWAY_PASSWORD;
+        delete process.env.ENCLAWS_GATEWAY_PASSWORD;
       } else {
-        process.env.OPENCLAW_GATEWAY_PASSWORD = prevPassword;
+        process.env.ENCLAWS_GATEWAY_PASSWORD = prevPassword;
       }
     }
   });
@@ -626,7 +626,7 @@ describe("security audit", () => {
     const execDockerRawFn = (async (args: string[]) => {
       if (args[0] === "ps") {
         return {
-          stdout: Buffer.from("openclaw-sbx-browser-old\nopenclaw-sbx-browser-missing-hash\n"),
+          stdout: Buffer.from("openclaw-sbx-browser-old.enclaws-sbx-browser-missing-hash\n"),
           stderr: Buffer.alloc(0),
           code: 0,
         };
@@ -1633,7 +1633,7 @@ describe("security audit", () => {
         "channels.discord.guilds.123.channels.general.users:security-team",
       );
       expect(finding?.detail).toContain(
-        "~/.openclaw/credentials/discord-allowFrom.json:team.owner",
+        "~/.enclaws/credentials/discord-allowFrom.json:team.owner",
       );
       expect(finding?.detail).not.toContain("<@123456789012345678>");
     });
@@ -2053,8 +2053,8 @@ describe("security audit", () => {
   });
 
   it("flags hooks token reuse of the gateway env token as critical", async () => {
-    const prevToken = process.env.OPENCLAW_GATEWAY_TOKEN;
-    process.env.OPENCLAW_GATEWAY_TOKEN = "shared-gateway-token-1234567890";
+    const prevToken = process.env.ENCLAWS_GATEWAY_TOKEN;
+    process.env.ENCLAWS_GATEWAY_TOKEN = "shared-gateway-token-1234567890";
     const cfg: OpenClawConfig = {
       hooks: { enabled: true, token: "shared-gateway-token-1234567890" },
     };
@@ -2064,9 +2064,9 @@ describe("security audit", () => {
       expectFinding(res, "hooks.token_reuse_gateway_token", "critical");
     } finally {
       if (prevToken === undefined) {
-        delete process.env.OPENCLAW_GATEWAY_TOKEN;
+        delete process.env.ENCLAWS_GATEWAY_TOKEN;
       } else {
-        process.env.OPENCLAW_GATEWAY_TOKEN = prevToken;
+        process.env.ENCLAWS_GATEWAY_TOKEN = prevToken;
       }
     }
   });
@@ -2205,8 +2205,8 @@ describe("security audit", () => {
     const cfg: OpenClawConfig = {};
 
     const res = await audit(cfg, {
-      stateDir: "/Users/test/Dropbox/.openclaw",
-      configPath: "/Users/test/Dropbox/.openclaw/openclaw.json",
+      stateDir: "/Users/test/Dropbox/.enclaws",
+      configPath: "/Users/test/Dropbox/.enclaws/openclaw.json",
     });
 
     expectFinding(res, "fs.synced_dir", "warn");
@@ -2834,10 +2834,10 @@ description: test skill
     const makeProbeEnv = (env?: { token?: string; password?: string }) => {
       const probeEnv: NodeJS.ProcessEnv = {};
       if (env?.token !== undefined) {
-        probeEnv.OPENCLAW_GATEWAY_TOKEN = env.token;
+        probeEnv.ENCLAWS_GATEWAY_TOKEN = env.token;
       }
       if (env?.password !== undefined) {
-        probeEnv.OPENCLAW_GATEWAY_PASSWORD = env.password;
+        probeEnv.ENCLAWS_GATEWAY_PASSWORD = env.password;
       }
       return probeEnv;
     };

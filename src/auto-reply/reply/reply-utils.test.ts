@@ -16,7 +16,7 @@ import { createTypingSignaler, resolveTypingMode } from "./typing-mode.js";
 import { createTypingController } from "./typing.js";
 
 describe("matchesMentionWithExplicit", () => {
-  const mentionRegexes = [/\bopenclaw\b/i];
+  const mentionRegexes = [/.enclaws\b/i];
 
   it("combines explicit-mention state with regex fallback rules", () => {
     const cases = [

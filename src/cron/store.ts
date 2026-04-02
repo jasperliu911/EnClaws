@@ -22,7 +22,7 @@ export function resolveCronStorePath(storePath?: string) {
 
 /**
  * Resolve the cron store path for a specific tenant user.
- * Returns: ~/.openclaw/tenants/{tenantId}/users/{userId}/cron/jobs.json
+ * Returns: ~/.enclaws/tenants/{tenantId}/users/{userId}/cron/jobs.json
  */
 export function resolveUserCronStorePath(tenantId: string, userId: string): string {
   return resolveTenantCronStorePath(tenantId, userId);

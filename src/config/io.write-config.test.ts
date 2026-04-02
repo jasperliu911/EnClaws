@@ -17,7 +17,7 @@ describe("config io write", () => {
     env?: NodeJS.ProcessEnv;
     logger?: { warn: (msg: string) => void; error: (msg: string) => void };
   }) {
-    const configPath = path.join(params.home, ".openclaw", "openclaw.json");
+    const configPath = path.join(params.home, ".enclaws", "openclaw.json");
     await fs.mkdir(path.dirname(configPath), { recursive: true });
     await fs.writeFile(configPath, JSON.stringify(params.initialConfig, null, 2), "utf-8");
 
@@ -64,7 +64,7 @@ describe("config io write", () => {
         error: vi.fn(),
       },
     });
-    const auditPath = path.join(params.home, ".openclaw", "logs", "config-audit.jsonl");
+    const auditPath = path.join(params.home, ".enclaws", "logs", "config-audit.jsonl");
     const next = structuredClone(snapshot.config);
     const gateway =
       next.gateway && typeof next.gateway === "object"
@@ -182,7 +182,7 @@ describe("config io write", () => {
 
   it("does not mutate caller config when unsetPaths is applied on first write", async () => {
     await withTempHome("openclaw-config-io-", async (home) => {
-      const configPath = path.join(home, ".openclaw", "openclaw.json");
+      const configPath = path.join(home, ".enclaws", "openclaw.json");
       const io = createConfigIO({
         env: {} as NodeJS.ProcessEnv,
         homedir: () => home,
@@ -349,7 +349,7 @@ describe("config io write", () => {
 
   it("keeps env refs in arrays when appending entries", async () => {
     await withTempHome("openclaw-config-io-", async (home) => {
-      const configPath = path.join(home, ".openclaw", "openclaw.json");
+      const configPath = path.join(home, ".enclaws", "openclaw.json");
       await fs.mkdir(path.dirname(configPath), { recursive: true });
       await fs.writeFile(
         configPath,
@@ -500,9 +500,9 @@ describe("config io write", () => {
         initialConfig: { gateway: { mode: "local" } },
         gatewayPatch: { bind: "loopback" },
         env: {
-          OPENCLAW_WATCH_MODE: "1",
-          OPENCLAW_WATCH_SESSION: "watch-session-1",
-          OPENCLAW_WATCH_COMMAND: "gateway --force",
+          ENCLAWS_WATCH_MODE: "1",
+          ENCLAWS_WATCH_SESSION: "watch-session-1",
+          ENCLAWS_WATCH_COMMAND: "gateway --force",
         } as NodeJS.ProcessEnv,
       });
       expect(last.watchMode).toBe(true);

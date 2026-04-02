@@ -2,9 +2,9 @@
  * JWT token management for multi-tenant auth.
  *
  * Environment variables:
- *   OPENCLAW_JWT_SECRET            - Secret key for signing tokens (required)
- *   OPENCLAW_JWT_ACCESS_EXPIRES    - Access token TTL (default: "15m")
- *   OPENCLAW_JWT_REFRESH_EXPIRES   - Refresh token TTL (default: "7d")
+ *   ENCLAWS_JWT_SECRET            - Secret key for signing tokens (required)
+ *   ENCLAWS_JWT_ACCESS_EXPIRES    - Access token TTL (default: "15m")
+ *   ENCLAWS_JWT_REFRESH_EXPIRES   - Refresh token TTL (default: "7d")
  */
 
 import jwt from "jsonwebtoken";
@@ -12,20 +12,47 @@ import crypto from "node:crypto";
 import type { JwtPayload, JwtTokenPair } from "../db/types.js";
 import { query, getDbType, DB_SQLITE } from "../db/index.js";
 
+/**
+ * Per-boot ephemeral secret: generated once on startup so that all
+ * previously issued JWTs are automatically invalidated on restart.
+ * Only used when ENCLAWS_JWT_SECRET is not explicitly configured.
+ */
+let ephemeralSecret: string | null = null;
+
 function getSecret(): string {
-  const secret = process.env.OPENCLAW_JWT_SECRET;
-  if (!secret) {
-    throw new Error("[auth] OPENCLAW_JWT_SECRET environment variable is required");
+  const secret = process.env.ENCLAWS_JWT_SECRET;
+  if (secret) {
+    return secret;
   }
-  return secret;
+  if (!ephemeralSecret) {
+    ephemeralSecret = crypto.randomBytes(64).toString("hex");
+    console.log("[auth] No ENCLAWS_JWT_SECRET set — using ephemeral secret (JWTs invalidated on restart)");
+    // Revoke all refresh tokens so that old sessions cannot silently re-authenticate
+    void revokeAllRefreshTokensOnBoot();
+  }
+  return ephemeralSecret;
+}
+
+async function revokeAllRefreshTokensOnBoot(): Promise<void> {
+  try {
+    const result = await query(
+      "UPDATE refresh_tokens SET revoked = true WHERE revoked = false",
+    );
+    const count = result.rowCount ?? 0;
+    if (count > 0) {
+      console.log(`[auth] Revoked ${count} refresh token(s) on boot (ephemeral secret mode)`);
+    }
+  } catch {
+    // DB may not be initialized yet; ignore — tokens will fail verification anyway
+  }
 }
 
 function getAccessExpires(): string {
-  return process.env.OPENCLAW_JWT_ACCESS_EXPIRES ?? "15m";
+  return process.env.ENCLAWS_JWT_ACCESS_EXPIRES ?? "15m";
 }
 
 function getRefreshExpires(): string {
-  return process.env.OPENCLAW_JWT_REFRESH_EXPIRES ?? "7d";
+  return process.env.ENCLAWS_JWT_REFRESH_EXPIRES ?? "7d";
 }
 
 function parseExpiresIn(expr: string): number {

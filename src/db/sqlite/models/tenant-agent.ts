@@ -12,7 +12,6 @@ function rowToAgent(row: Record<string, unknown>): TenantAgent {
     agentId: row.agent_id as string,
     name: (row.name as string) ?? null,
     config: (typeof row.config === "string" ? JSON.parse(row.config) : row.config ?? {}) as Record<string, unknown>,
-    channelAppId: (row.channel_app_id as string) ?? null,
     modelConfig: (typeof row.model_config === "string" ? JSON.parse(row.model_config) : row.model_config ?? []) as ModelConfigEntry[],
     isActive: Boolean(row.is_active),
     createdBy: (row.created_by as string) ?? null,
@@ -26,15 +25,14 @@ export async function createTenantAgent(params: {
   agentId: string;
   name?: string;
   config?: Record<string, unknown>;
-  channelAppId?: string;
   modelConfig?: ModelConfigEntry[];
   createdBy?: string;
 }): Promise<TenantAgent> {
   const id = generateUUID();
   sqliteQuery(
-    `INSERT INTO tenant_agents (id, tenant_id, agent_id, name, config, channel_app_id, model_config, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, params.tenantId, params.agentId, params.name, JSON.stringify(params.config ?? {}), params.channelAppId ?? null, JSON.stringify(params.modelConfig ?? []), params.createdBy ?? null],
+    `INSERT INTO tenant_agents (id, tenant_id, agent_id, name, config, model_config, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [id, params.tenantId, params.agentId, params.name, JSON.stringify(params.config ?? {}), JSON.stringify(params.modelConfig ?? []), params.createdBy ?? null],
   );
   const result = sqliteQuery("SELECT * FROM tenant_agents WHERE id = ?", [id]);
   return rowToAgent(result.rows[0]);
@@ -73,7 +71,7 @@ export async function listTenantAgents(
 export async function updateTenantAgent(
   tenantId: string,
   agentId: string,
-  updates: Partial<Pick<TenantAgent, "name" | "config" | "channelAppId" | "modelConfig" | "isActive">>,
+  updates: Partial<Pick<TenantAgent, "name" | "config" | "modelConfig" | "isActive">>,
 ): Promise<TenantAgent | null> {
   const sets: string[] = [];
   const values: unknown[] = [];
@@ -85,10 +83,6 @@ export async function updateTenantAgent(
   if (updates.config !== undefined) {
     sets.push("config = ?");
     values.push(JSON.stringify(updates.config));
-  }
-  if (updates.channelAppId !== undefined) {
-    sets.push("channel_app_id = ?");
-    values.push(updates.channelAppId);
   }
   if (updates.modelConfig !== undefined) {
     sets.push("model_config = ?");

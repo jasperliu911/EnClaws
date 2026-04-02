@@ -36,7 +36,7 @@ export async function buildSysConfig(): Promise<OpenClawConfig> {
   };
 
   // .env overrides for startup-essential fields
-  const envPort = process.env.OPENCLAW_GATEWAY_PORT;
+  const envPort = process.env.ENCLAWS_GATEWAY_PORT;
   if (envPort && config.gateway) {
     const parsed = parseInt(envPort, 10);
     if (!isNaN(parsed)) config.gateway.port = parsed;
@@ -45,8 +45,8 @@ export async function buildSysConfig(): Promise<OpenClawConfig> {
   // control_ui: built entirely from env vars
   if (config.gateway) {
     const port = config.gateway.port ?? 18888;
-    const envDisableAuth = process.env.OPENCLAW_CONTROL_UI_DISABLE_DEVICE_AUTH;
-    const envOrigins = process.env.OPENCLAW_CONTROL_UI_ALLOWED_ORIGINS;
+    const envDisableAuth = process.env.ENCLAWS_CONTROL_UI_DISABLE_DEVICE_AUTH;
+    const envOrigins = process.env.ENCLAWS_CONTROL_UI_ALLOWED_ORIGINS;
 
     config.gateway.controlUi = {
       dangerouslyDisableDeviceAuth: envDisableAuth === "true",

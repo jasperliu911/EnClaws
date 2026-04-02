@@ -35,7 +35,7 @@ const ONE_PIXEL_GIF_B64 = "R0lGODlhAQABAIABAP///wAAACwAAAAAAQABAAACAkQBADs=";
 async function withTempWorkspacePng(
   cb: (args: { workspaceDir: string; imagePath: string }) => Promise<void>,
 ) {
-  const workspaceParent = await fs.mkdtemp(path.join(process.cwd(), ".openclaw-workspace-image-"));
+  const workspaceParent = await fs.mkdtemp(path.join(process.cwd(), ".enclaws-workspace-image-"));
   try {
     const workspaceDir = path.join(workspaceParent, "workspace");
     await fs.mkdir(workspaceDir, { recursive: true });
@@ -577,7 +577,7 @@ describe("image tool implicit imageModel config", () => {
 
     const res = await tool.execute("t1", {
       prompt: "Describe the image.",
-      image: "@/Users/steipete/.openclaw/media/inbound/photo.png",
+      image: "@/Users/steipete/.enclaws/media/inbound/photo.png",
     });
 
     expect(fetch).toHaveBeenCalledTimes(1);

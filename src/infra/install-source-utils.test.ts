@@ -165,7 +165,7 @@ describe("packNpmSpecToArchive", () => {
     const expectedArchivePath = path.join(cwd, "openclaw-plugin-1.2.3.tgz");
     await fs.writeFile(expectedArchivePath, "", "utf-8");
     mockPackCommandResult({
-      stdout: "npm notice created package\nopenclaw-plugin-1.2.3.tgz\n",
+      stdout: "npm notice created package.enclaws-plugin-1.2.3.tgz\n",
     });
 
     const result = await runPack("openclaw-plugin@1.2.3", cwd);

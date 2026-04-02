@@ -13,7 +13,6 @@ function rowToAgent(row: Record<string, unknown>): TenantAgent {
     agentId: row.agent_id as string,
     name: (row.name as string) ?? null,
     config: (row.config ?? {}) as Record<string, unknown>,
-    channelAppId: (row.channel_app_id as string) ?? null,
     modelConfig: (row.model_config ?? []) as ModelConfigEntry[],
     isActive: row.is_active as boolean,
     createdBy: (row.created_by as string) ?? null,
@@ -27,16 +26,15 @@ export async function createTenantAgent(params: {
   agentId: string;
   name?: string;
   config?: Record<string, unknown>;
-  channelAppId?: string;
   modelConfig?: ModelConfigEntry[];
   createdBy?: string;
 }): Promise<TenantAgent> {
   if (getDbType() === DB_SQLITE) return sqliteAgent.createTenantAgent(params);
   const result = await query(
-    `INSERT INTO tenant_agents (tenant_id, agent_id, name, config, channel_app_id, model_config, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO tenant_agents (tenant_id, agent_id, name, config, model_config, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
-    [params.tenantId, params.agentId, params.name, JSON.stringify(params.config ?? {}), params.channelAppId ?? null, JSON.stringify(params.modelConfig ?? []), params.createdBy ?? null],
+    [params.tenantId, params.agentId, params.name, JSON.stringify(params.config ?? {}), JSON.stringify(params.modelConfig ?? []), params.createdBy ?? null],
   );
   return rowToAgent(result.rows[0]);
 }
@@ -77,7 +75,7 @@ export async function listTenantAgents(
 export async function updateTenantAgent(
   tenantId: string,
   agentId: string,
-  updates: Partial<Pick<TenantAgent, "name" | "config" | "channelAppId" | "modelConfig" | "isActive">>,
+  updates: Partial<Pick<TenantAgent, "name" | "config" | "modelConfig" | "isActive">>,
 ): Promise<TenantAgent | null> {
   if (getDbType() === DB_SQLITE) return sqliteAgent.updateTenantAgent(tenantId, agentId, updates);
   const sets: string[] = [];
@@ -91,10 +89,6 @@ export async function updateTenantAgent(
   if (updates.config !== undefined) {
     sets.push(`config = $${idx++}`);
     values.push(JSON.stringify(updates.config));
-  }
-  if (updates.channelAppId !== undefined) {
-    sets.push(`channel_app_id = $${idx++}`);
-    values.push(updates.channelAppId);
   }
   if (updates.modelConfig !== undefined) {
     sets.push(`model_config = $${idx++}`);

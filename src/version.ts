@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 
-declare const __OPENCLAW_VERSION__: string | undefined;
+declare const __ENCLAWS_VERSION__: string | undefined;
 const CORE_PACKAGE_NAME = "enclaws";
 
 const PACKAGE_JSON_CANDIDATES = [
@@ -81,8 +81,8 @@ export function resolveRuntimeServiceVersion(
 ): string {
   return (
     firstNonEmpty(
-      env["OPENCLAW_VERSION"],
-      env["OPENCLAW_SERVICE_VERSION"],
+      env["ENCLAWS_VERSION"],
+      env["ENCLAWS_SERVICE_VERSION"],
       env["npm_package_version"],
     ) ?? fallback
   );
@@ -97,7 +97,7 @@ export const PRODUCT_NAME_LOWER = PRODUCT_NAME.toLowerCase();
 // - Embedded/bundled builds: injected define or env var.
 // - Dev/npm builds: package.json.
 export const VERSION =
-  (typeof __OPENCLAW_VERSION__ === "string" && __OPENCLAW_VERSION__) ||
-  process.env.OPENCLAW_BUNDLED_VERSION ||
+  (typeof __ENCLAWS_VERSION__ === "string" && __ENCLAWS_VERSION__) ||
+  process.env.ENCLAWS_BUNDLED_VERSION ||
   resolveVersionFromModuleUrl(import.meta.url) ||
   "0.0.0";

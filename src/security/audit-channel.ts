@@ -249,7 +249,7 @@ export async function collectChannelSecurityFindings(params: {
         addDiscordNameBasedEntries({
           target: discordNameBasedAllowEntries,
           values: storeAllowFrom,
-          source: "~/.openclaw/credentials/discord-allowFrom.json",
+          source: "~/.enclaws/credentials/discord-allowFrom.json",
         });
         const discordGuildEntries =
           (discordCfg.guilds as Record<string, unknown> | undefined) ?? {};

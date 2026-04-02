@@ -12,7 +12,7 @@ import { assertPermission, RbacError } from "../../auth/rbac.js";
 import type { TenantContext } from "../../auth/middleware.js";
 import { checkTenantQuota } from "../../db/models/tenant.js";
 import { createTenantChannel } from "../../db/models/tenant-channel.js";
-import { createChannelApp } from "../../db/models/tenant-channel-app.js";
+import { createChannelApp, updateChannelApp } from "../../db/models/tenant-channel-app.js";
 import { createTenantModel } from "../../db/models/tenant-model.js";
 import { createTenantAgent } from "../../db/models/tenant-agent.js";
 import { createAuditLog } from "../../db/models/audit-log.js";
@@ -100,17 +100,32 @@ export const tenantOnboardingHandlers: GatewayRequestHandlers = {
           if (!channelQuota.allowed) {
             throw new Error(`Channel quota reached (${channelQuota.current}/${channelQuota.max})`);
           }
+          const userConfig = (channel.config ?? {}) as Record<string, unknown>;
+          const appId = (userConfig.appId as string) ?? "";
+          const appSecret = (userConfig.appSecret as string) ?? "";
+          const defaultConfig = {
+            enabled: true,
+            appId,
+            appSecret,
+            domain: channel.channelType,
+            connectionMode: "websocket",
+            requireMention: true,
+            dmPolicy: "open",
+            groupPolicy: "open",
+            allowFrom: ["*"],
+            groupAllowFrom: [],
+            replyMode: { group: "streaming", direct: "streaming", default: "auto" },
+            uat: { ownerOnly: false, appRoleAuth: true, accessLevel: 1, autoOnboarding: true },
+            streaming: true,
+            ...userConfig,
+          };
           channelResult = await createTenantChannel({
             tenantId: ctx.tenantId,
             channelType: channel.channelType,
-            channelName: channel.channelName,
-            config: channel.config as any,
+            channelName: channel.channelName ?? channel.channelType,
+            config: defaultConfig as any,
             createdBy: ctx.userId,
           });
-
-          // Create channel app with appId/appSecret
-          const appId = (channel.config as Record<string, unknown>)?.appId as string | undefined;
-          const appSecret = (channel.config as Record<string, unknown>)?.appSecret as string | undefined;
           if (appId) {
             channelAppResult = await createChannelApp({
               channelId: channelResult.id,
@@ -151,10 +166,14 @@ export const tenantOnboardingHandlers: GatewayRequestHandlers = {
           agentId: agent.agentId,
           name: agent.name,
           config: agent.config ?? {},
-          channelAppId: channelAppResult?.id,
           modelConfig,
           createdBy: ctx.userId,
         });
+
+        // Bind agent to channel app if both were created
+        if (channelAppResult && agentResult) {
+          await updateChannelApp(channelAppResult.id, ctx.tenantId, { agentId: agent.agentId });
+        }
 
         return { channel: channelResult, channelApp: channelAppResult, model: modelResult, agent: agentResult };
       });

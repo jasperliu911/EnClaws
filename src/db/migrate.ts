@@ -5,7 +5,7 @@
  *   node --import tsx src/db/migrate.ts          # run pending migrations
  *   node --import tsx src/db/migrate.ts --status  # show migration status
  *
- * Supports both PostgreSQL and SQLite based on OPENCLAW_DB_URL.
+ * Supports both PostgreSQL and SQLite based on ENCLAWS_DB_URL.
  */
 
 import fs from "node:fs";
@@ -90,6 +90,14 @@ async function runMigrations(): Promise<void> {
       db.exec("ALTER TABLE users ADD COLUMN channel_id TEXT REFERENCES tenant_channels(id) ON DELETE SET NULL");
       db.exec("CREATE INDEX IF NOT EXISTS idx_users_channel ON users (channel_id)");
       console.log("[migrate]   ✓ SQLite: added channel_id column to users");
+    }
+
+    // Inline SQLite migration: add agent_id to tenant_channel_apps if missing
+    const appCols = db.prepare("PRAGMA table_info(tenant_channel_apps)").all() as { name: string }[];
+    if (!appCols.some((c) => c.name === "agent_id")) {
+      db.exec("ALTER TABLE tenant_channel_apps ADD COLUMN agent_id TEXT");
+      db.exec("CREATE INDEX IF NOT EXISTS idx_channel_apps_agent ON tenant_channel_apps (agent_id)");
+      console.log("[migrate]   ✓ SQLite: added agent_id column to tenant_channel_apps");
     }
   }
 

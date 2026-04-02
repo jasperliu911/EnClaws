@@ -96,7 +96,7 @@ export function createTaskPlannerTool(options?: {
         ? parentSessionKeyRaw.replace(/[^a-zA-Z0-9_-]/g, "_")
         : sessionKey;
 
-      const plannerDir = path.join(workspaceDir, ".openclaw", "planner");
+      const plannerDir = path.join(workspaceDir, ".enclaws", "planner");
       const plannerFile = path.join(plannerDir, `${targetSessionKey}.json`);
 
       let lockRelease: (() => Promise<void>) | undefined;

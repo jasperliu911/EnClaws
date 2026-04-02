@@ -22,7 +22,7 @@ async function loadTaskPlanFromDisk(
   sessionKey: string,
 ): Promise<TaskPlan | null> {
   const safeKey = sessionKey.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const plannerFile = path.join(workspaceDir, ".openclaw", "planner", `${safeKey}.json`);
+  const plannerFile = path.join(workspaceDir, ".enclaws", "planner", `${safeKey}.json`);
   try {
     const content = await fs.readFile(plannerFile, "utf-8");
     return JSON.parse(content) as TaskPlan;

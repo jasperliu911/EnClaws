@@ -642,8 +642,8 @@ export async function runSecretsAudit(
   } = {},
 ): Promise<SecretsAuditReport> {
   const env = params.env ?? process.env;
-  const previousAuthStoreReadOnly = process.env.OPENCLAW_AUTH_STORE_READONLY;
-  process.env.OPENCLAW_AUTH_STORE_READONLY = "1";
+  const previousAuthStoreReadOnly = process.env.ENCLAWS_AUTH_STORE_READONLY;
+  process.env.ENCLAWS_AUTH_STORE_READONLY = "1";
   try {
     const io = createSecretsConfigIO({ env });
     const snapshot = await io.readConfigFileSnapshot();
@@ -717,9 +717,9 @@ export async function runSecretsAudit(
     };
   } finally {
     if (previousAuthStoreReadOnly === undefined) {
-      delete process.env.OPENCLAW_AUTH_STORE_READONLY;
+      delete process.env.ENCLAWS_AUTH_STORE_READONLY;
     } else {
-      process.env.OPENCLAW_AUTH_STORE_READONLY = previousAuthStoreReadOnly;
+      process.env.ENCLAWS_AUTH_STORE_READONLY = previousAuthStoreReadOnly;
     }
   }
 }

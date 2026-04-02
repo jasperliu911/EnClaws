@@ -12,7 +12,7 @@ export function resolvePairingPaths(
 ) {
   let root: string;
   if (tenantContext) {
-    // Multi-tenant mode: ~/.openclaw/tenants/{tenantId}/users/{userId}/{subdir}/
+    // Multi-tenant mode: ~/.enclaws/tenants/{tenantId}/users/{userId}/{subdir}/
     // resolveTenantUserDir returns the user base dir, subdir is appended below.
     root = resolveTenantUserDir(tenantContext.tenantId, tenantContext.userId);
   } else {

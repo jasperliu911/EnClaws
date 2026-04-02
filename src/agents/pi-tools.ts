@@ -176,7 +176,7 @@ export function resolveToolLoopDetectionConfig(params: {
  *
  * Injects process-isolated environment variables so that tenant skill scripts
  * can read context without relying on shared files or model parameter passing:
- *   - OPENCLAW_TENANT_ID / OPENCLAW_TENANT_USER_ID — multi-tenant identity
+ *   - ENCLAWS_TENANT_ID / ENCLAWS_TENANT_USER_ID — multi-tenant identity
  *   - ENCLAWS_USER_WORKSPACE — full path to the current user's workspace directory
  *   - FEISHU_APP_ID / FEISHU_APP_SECRET — channel app credentials (concurrency-safe)
  *   - ENCLAWS_CHAT_ID — current chat id for auth card routing
@@ -193,8 +193,8 @@ function buildExecExtraEnv(options?: {
   const env: Record<string, string> = {};
 
   // Tenant identity
-  if (options?.tenantId) env.OPENCLAW_TENANT_ID = options.tenantId;
-  if (options?.tenantUserId) env.OPENCLAW_TENANT_USER_ID = options.tenantUserId;
+  if (options?.tenantId) env.ENCLAWS_TENANT_ID = options.tenantId;
+  if (options?.tenantUserId) env.ENCLAWS_TENANT_USER_ID = options.tenantUserId;
 
   // User workspace path — enables skill scripts to save files to the correct user directory
   if (options?.workspaceDir) env.ENCLAWS_USER_WORKSPACE = options.workspaceDir;
@@ -217,7 +217,7 @@ function buildExecExtraEnv(options?: {
       if (creds?.appId) env.FEISHU_APP_ID = creds.appId;
       if (creds?.appSecret) env.FEISHU_APP_SECRET = creds.appSecret;
     } catch {
-      // Non-fatal — skill scripts fall back to config.json / openclaw.json
+      // Non-fatal — skill scripts fall back to config.json / enclaws.json
     }
   }
 

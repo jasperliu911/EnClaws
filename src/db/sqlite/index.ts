@@ -150,27 +150,43 @@ export function sqliteQuery<T = Record<string, unknown>>(
     }
 
     if (upperSql.startsWith("UPDATE")) {
-      // For UPDATE ... RETURNING, we need to find the affected rows first
-      // Extract WHERE clause
       const whereMatch = sql.match(/\bWHERE\b.+$/is);
       const tableMatch = sql.match(/UPDATE\s+(\w+)/i);
       const table = tableMatch?.[1];
 
-      const stmt = database.prepare(sql);
-      const result = stmt.run(...adaptedParams);
-
       if (table && whereMatch) {
-        // Re-select the updated rows using the same WHERE clause
+        // Capture matching rowids BEFORE the UPDATE, because the UPDATE may
+        // change columns referenced in the WHERE clause (e.g. SET revoked = true
+        // with WHERE revoked = false). Re-selecting with the original WHERE
+        // after the UPDATE would return zero rows in that scenario.
         const whereClause = whereMatch[0];
-        // Count how many ? are before the WHERE clause
         const beforeWhere = sql.slice(0, sql.indexOf(whereClause));
         const paramsBefore = (beforeWhere.match(/\?/g) || []).length;
         const whereParams = adaptedParams.slice(paramsBefore);
 
-        const selectStmt = database.prepare(`SELECT * FROM ${table} ${whereClause}`);
-        const rows = selectStmt.all(...whereParams) as T[];
-        return { rows: rows.map((r) => adaptRow(r) as T), rowCount: rows.length };
+        const rowidStmt = database.prepare(`SELECT rowid FROM ${table} ${whereClause}`);
+        const matchingRowids = rowidStmt.all(...whereParams) as { rowid: number }[];
+
+        // Perform the UPDATE
+        const stmt = database.prepare(sql);
+        stmt.run(...adaptedParams);
+
+        // Re-select updated rows by rowid (post-update values, like PG RETURNING)
+        if (matchingRowids.length > 0) {
+          const placeholders = matchingRowids.map(() => "?").join(",");
+          const selectStmt = database.prepare(
+            `SELECT * FROM ${table} WHERE rowid IN (${placeholders})`,
+          );
+          const rows = selectStmt.all(
+            ...matchingRowids.map((r) => r.rowid),
+          ) as T[];
+          return { rows: rows.map((r) => adaptRow(r) as T), rowCount: rows.length };
+        }
+        return { rows: [], rowCount: 0 };
       }
+
+      const stmt = database.prepare(sql);
+      const result = stmt.run(...adaptedParams);
       return { rows: [], rowCount: result.changes as number };
     }
   }

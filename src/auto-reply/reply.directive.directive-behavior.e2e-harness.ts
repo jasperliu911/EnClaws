@@ -57,8 +57,8 @@ export async function withTempHome<T>(fn: (home: string) => Promise<T>): Promise
     },
     {
       env: {
-        OPENCLAW_AGENT_DIR: (home) => path.join(home, ".openclaw", "agent"),
-        PI_CODING_AGENT_DIR: (home) => path.join(home, ".openclaw", "agent"),
+        ENCLAWS_AGENT_DIR: (home) => path.join(home, ".enclaws", "agent"),
+        PI_CODING_AGENT_DIR: (home) => path.join(home, ".enclaws", "agent"),
       },
       prefix: "openclaw-reply-",
     },

@@ -169,6 +169,18 @@ foreach ($d in $dirsToCopy) {
     }
 }
 
+# Workspace bootstrap templates (runtime reads docs/reference/templates via resolveWorkspaceTemplateDir).
+# Not included in dist/; npm publish includes docs/, but the Windows bundle must copy them explicitly.
+$templatesSrc = Join-Path $ProjectRoot "docs\reference\templates"
+$templatesDest = Join-Path $AppBundleDir "docs\reference\templates"
+if (Test-Path $templatesSrc) {
+    New-Item -ItemType Directory -Force -Path (Split-Path $templatesDest -Parent) | Out-Null
+    Copy-Item $templatesSrc $templatesDest -Recurse -Force
+    Write-Host "    Copied docs/reference/templates/" -ForegroundColor Gray
+} else {
+    Write-Host "[!] Missing directory: docs/reference/templates/ (agent bootstrap will fail)" -ForegroundColor Yellow
+}
+
 # Generate a trimmed package.json for production install
 Write-Host "[*] Generating production package.json..." -ForegroundColor Yellow
 $prodPkg = [ordered]@{
@@ -240,7 +252,8 @@ if (Test-Path $piPkgPath) {
 Write-Host "[*] Cleaning up bundle..." -ForegroundColor Yellow
 # Patterns for both flat packages (node_modules/pkg/) and scoped packages (node_modules/@scope/pkg/)
 $cleanNames = @("*.md", "CHANGELOG*", "HISTORY*", ".github", "test", "tests",
-    "__tests__", "example", "examples", ".travis.yml", ".eslintrc*", ".prettierrc*", "tsconfig.json")
+    "__tests__", "example", "examples", ".travis.yml", ".eslintrc*", ".prettierrc*", "tsconfig.json",
+    "*.map", "doc", "docs")
 $cleanPatterns = @()
 foreach ($name in $cleanNames) {
     $cleanPatterns += "node_modules\*\$name"
@@ -251,6 +264,62 @@ foreach ($pat in $cleanPatterns) {
     Get-Item $fullPat -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 }
 Write-Host "[OK] Cleaned up bundle" -ForegroundColor Green
+
+# Remove non-Windows platform binaries from koffi (saves ~74 MB)
+Write-Host "[*] Removing non-Windows platform binaries..." -ForegroundColor Yellow
+$koffiBuildDir = Join-Path $AppBundleDir "node_modules\koffi\build\koffi"
+if (Test-Path $koffiBuildDir) {
+    Get-ChildItem $koffiBuildDir -Directory | Where-Object { $_.Name -notlike "win32_*" } |
+        ForEach-Object { Remove-Item $_.FullName -Recurse -Force }
+    # Also remove koffi/src (not needed at runtime)
+    $koffiSrc = Join-Path $AppBundleDir "node_modules\koffi\src"
+    if (Test-Path $koffiSrc) { Remove-Item $koffiSrc -Recurse -Force }
+    Write-Host "[OK] Removed non-Windows koffi binaries" -ForegroundColor Green
+}
+
+# Remove pdfjs-dist/legacy (duplicate of build/, saves ~20 MB)
+$pdfjsLegacy = Join-Path $AppBundleDir "node_modules\pdfjs-dist\legacy"
+if (Test-Path $pdfjsLegacy) {
+    Remove-Item $pdfjsLegacy -Recurse -Force
+    Write-Host "[OK] Removed pdfjs-dist/legacy" -ForegroundColor Green
+}
+
+# Remove echarts/dist (lib/ is sufficient for Node.js, saves ~49 MB)
+$echartsDist = Join-Path $AppBundleDir "node_modules\echarts\dist"
+if (Test-Path $echartsDist) {
+    Remove-Item $echartsDist -Recurse -Force
+    Write-Host "[OK] Removed echarts/dist" -ForegroundColor Green
+}
+
+# ---------------------------------------------------------------------------
+# Step 4b: Pack node_modules into a single tar archive
+# ---------------------------------------------------------------------------
+# Inno Setup extracting 32000+ small files is extremely slow on NTFS.
+# Packing into a single .tar lets Inno handle just 1 file; postinstall.js
+# extracts it using the bundled Node.js + Windows built-in tar command.
+
+$nmDir = Join-Path $AppBundleDir "node_modules"
+if (Test-Path $nmDir) {
+    Write-Host "[*] Packing node_modules into tar archive..." -ForegroundColor Yellow
+    Push-Location $AppBundleDir
+    try {
+        tar -cf node_modules.tar node_modules
+        if ($LASTEXITCODE -ne 0) { throw "tar -cf failed with exit code $LASTEXITCODE" }
+    } finally {
+        Pop-Location
+    }
+    $tarSize = [math]::Round((Get-Item (Join-Path $AppBundleDir "node_modules.tar")).Length / 1MB, 1)
+    Write-Host "[OK] node_modules.tar created (${tarSize} MB)" -ForegroundColor Green
+
+    # Remove the original node_modules directory (use robocopy trick for long paths)
+    Write-Host "[*] Removing original node_modules directory..." -ForegroundColor Yellow
+    $emptyDir2 = Join-Path $env:TEMP "enclaws-empty-$([guid]::NewGuid().ToString('N'))"
+    New-Item -ItemType Directory -Force -Path $emptyDir2 | Out-Null
+    robocopy $emptyDir2 $nmDir /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+    Remove-Item -Force $emptyDir2
+    Remove-Item -Force $nmDir
+    Write-Host "[OK] node_modules directory removed (tar only)" -ForegroundColor Green
+}
 
 # Calculate bundle size
 $bundleSize = (Get-ChildItem $AppBundleDir -Recurse | Measure-Object -Property Length -Sum).Sum

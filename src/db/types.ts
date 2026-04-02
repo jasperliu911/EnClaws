@@ -201,7 +201,6 @@ export interface TenantAgent {
   agentId: string;
   name: string | null;
   config: Record<string, unknown>;
-  channelAppId: string | null;
   modelConfig: ModelConfigEntry[];
   isActive: boolean;
   createdBy: string | null;
@@ -257,6 +256,7 @@ export interface TenantChannelApp {
   appSecret: string;
   botName: string;
   groupPolicy: ChannelPolicy;
+  agentId: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -326,6 +326,7 @@ export interface LlmInteractionTrace {
   userId: string | null;
   sessionKey: string | null;
   agentId: string | null;
+  channel: string | null;
   turnId: string;
   turnIndex: number;
   userInput: string | null;

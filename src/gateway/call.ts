@@ -252,7 +252,7 @@ function resolveGatewayCredentials(context: ResolvedGatewayCallContext): {
     urlOverride: context.urlOverride,
     // Use config-first to match the gateway server's auth resolution
     // (resolveGatewayAuth uses config-first). Prevents token_mismatch
-    // when OPENCLAW_GATEWAY_TOKEN env var differs from gateway.auth.token.
+    // when ENCLAWS_GATEWAY_TOKEN env var differs from gateway.auth.token.
     localTokenPrecedence: "config-first",
     localPasswordPrecedence: "config-first",
     remotePasswordPrecedence: "env-first",

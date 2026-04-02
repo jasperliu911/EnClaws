@@ -30,7 +30,7 @@ const makeMsg = (overrides: Partial<WebInboundMsg>): WebInboundMsg =>
   }) as WebInboundMsg;
 
 describe("isBotMentionedFromTargets", () => {
-  const mentionCfg = { mentionRegexes: [/\bopenclaw\b/i] };
+  const mentionCfg = { mentionRegexes: [/.enclaws\b/i] };
 
   function expectMentioned(
     msg: WebInboundMsg,
@@ -71,7 +71,7 @@ describe("isBotMentionedFromTargets", () => {
   });
 
   it("ignores JID mentions in self-chat mode", () => {
-    const cfg = { mentionRegexes: [/\bopenclaw\b/i], allowFrom: ["+999"] };
+    const cfg = { mentionRegexes: [/.enclaws\b/i], allowFrom: ["+999"] };
     const msg = makeMsg({
       body: "@owner ping",
       mentionedJids: ["999@s.whatsapp.net"],
@@ -180,7 +180,7 @@ describe("web auto-reply util", () => {
         selfE164: "+15551234567",
         selfJid: "15551234567@s.whatsapp.net",
       });
-      const result = debugMention(msg, { mentionRegexes: [/\bopenclaw\b/i] });
+      const result = debugMention(msg, { mentionRegexes: [/.enclaws\b/i] });
       expect(result.wasMentioned).toBe(true);
       expect(result.details.bodyClean).toBe("openclaw ping");
       expect(result.details.normalizedMentionedJids).toBeNull();

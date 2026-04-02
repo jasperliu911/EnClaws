@@ -14,6 +14,7 @@ function rowToApp(row: Record<string, unknown>): TenantChannelApp {
     appSecret: row.app_secret as string,
     botName: row.bot_name as string,
     groupPolicy: (row.group_policy as ChannelPolicy) ?? "open",
+    agentId: (row.agent_id as string) ?? null,
     isActive: Boolean(row.is_active),
     createdAt: new Date(row.created_at as string),
     updatedAt: new Date(row.updated_at as string),
@@ -27,11 +28,12 @@ export async function createChannelApp(params: {
   appSecret?: string;
   botName?: string;
   groupPolicy?: ChannelPolicy;
+  agentId?: string | null;
 }): Promise<TenantChannelApp> {
   const id = generateUUID();
   sqliteQuery(
-    `INSERT INTO tenant_channel_apps (id, channel_id, tenant_id, app_id, app_secret, bot_name, group_policy)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO tenant_channel_apps (id, channel_id, tenant_id, app_id, app_secret, bot_name, group_policy, agent_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       params.channelId,
@@ -40,6 +42,7 @@ export async function createChannelApp(params: {
       params.appSecret ?? "",
       params.botName ?? "",
       params.groupPolicy ?? "open",
+      params.agentId ?? null,
     ],
   );
   const result = sqliteQuery("SELECT * FROM tenant_channel_apps WHERE id = ?", [id]);
@@ -57,7 +60,7 @@ export async function listChannelApps(channelId: string): Promise<TenantChannelA
 export async function updateChannelApp(
   appDbId: string,
   tenantId: string,
-  updates: Partial<Pick<TenantChannelApp, "appId" | "appSecret" | "botName" | "groupPolicy" | "isActive">>,
+  updates: Partial<Pick<TenantChannelApp, "appId" | "appSecret" | "botName" | "groupPolicy" | "agentId" | "isActive">>,
 ): Promise<TenantChannelApp | null> {
   const sets: string[] = [];
   const values: unknown[] = [];
@@ -77,6 +80,10 @@ export async function updateChannelApp(
   if (updates.groupPolicy !== undefined) {
     sets.push("group_policy = ?");
     values.push(updates.groupPolicy);
+  }
+  if (updates.agentId !== undefined) {
+    sets.push("agent_id = ?");
+    values.push(updates.agentId);
   }
   if (updates.isActive !== undefined) {
     sets.push("is_active = ?");

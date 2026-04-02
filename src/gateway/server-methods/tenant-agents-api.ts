@@ -91,7 +91,6 @@ export const tenantAgentsHandlers: GatewayRequestHandlers = {
         agentId: a.agentId,
         name: a.name,
         config: a.config,
-        channelAppId: a.channelAppId,
         modelConfig: a.modelConfig,
         isActive: a.isActive,
         createdBy: a.createdBy,
@@ -115,11 +114,10 @@ export const tenantAgentsHandlers: GatewayRequestHandlers = {
       throw err;
     }
 
-    const { agentId, name, config, channelAppId, modelConfig } = params as {
+    const { agentId, name, config, modelConfig } = params as {
       agentId: string;
       name: string;
       config?: Record<string, unknown>;
-      channelAppId?: string;
       modelConfig?: ModelConfigEntry[];
     };
 
@@ -166,7 +164,6 @@ export const tenantAgentsHandlers: GatewayRequestHandlers = {
       agentId,
       name,
       config,
-      channelAppId,
       modelConfig,
       createdBy: ctx.userId,
     });
@@ -188,7 +185,6 @@ export const tenantAgentsHandlers: GatewayRequestHandlers = {
       agentId: agent.agentId,
       name: agent.name,
       config: agent.config,
-      channelAppId: agent.channelAppId,
       modelConfig: agent.modelConfig,
     });
   },
@@ -207,11 +203,10 @@ export const tenantAgentsHandlers: GatewayRequestHandlers = {
       throw err;
     }
 
-    const { agentId, name, config, channelAppId, modelConfig, isActive } = params as {
+    const { agentId, name, config, modelConfig, isActive } = params as {
       agentId: string;
       name?: string;
       config?: Record<string, unknown>;
-      channelAppId?: string;
       modelConfig?: ModelConfigEntry[];
       isActive?: boolean;
     };
@@ -241,7 +236,7 @@ export const tenantAgentsHandlers: GatewayRequestHandlers = {
       }
     }
 
-    const updated = await updateTenantAgent(ctx.tenantId, agentId, { name, config, channelAppId, modelConfig, isActive });
+    const updated = await updateTenantAgent(ctx.tenantId, agentId, { name, config, modelConfig, isActive });
     if (!updated) {
       respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "Agent not found"));
       return;

@@ -3,7 +3,7 @@
  *
  * New directory layout (v1.0.1+):
  *
- *   ~/.openclaw/tenants/{tenantId}/
+ *   ~/.enclaws/tenants/{tenantId}/
  *     ├── IDENTITY.md                        # enterprise identity (from tenant settings)
  *     ├── TOOLS.md                           # enterprise-level tool notes
  *     ├── MEMORY.md                          # enterprise memory (auto-maintained by LLM + UI editable)
@@ -45,7 +45,7 @@ import { DEFAULT_AGENT_ID, normalizeAgentId } from "../../routing/session-key.js
 /**
  * Resolve the base directory for a tenant.
  *
- * ~/.openclaw/tenants/{tenantId}/
+ * ~/.enclaws/tenants/{tenantId}/
  */
 export function resolveTenantDir(
   tenantId: string,
@@ -59,7 +59,7 @@ export function resolveTenantDir(
 /**
  * Resolve the tenant-level agent directory (stateless, tenant-scoped).
  *
- * ~/.openclaw/tenants/{tenantId}/agents/{agentId}/
+ * ~/.enclaws/tenants/{tenantId}/agents/{agentId}/
  */
 export function resolveTenantAgentDir(
   tenantId: string,
@@ -72,7 +72,7 @@ export function resolveTenantAgentDir(
 /**
  * Resolve the tenant-level skills directory.
  *
- * ~/.openclaw/tenants/{tenantId}/skills/
+ * ~/.enclaws/tenants/{tenantId}/skills/
  */
 export function resolveTenantSkillsDir(tenantId: string): string {
   return path.join(resolveTenantDir(tenantId), "skills");
@@ -85,7 +85,7 @@ export function resolveTenantSkillsDir(tenantId: string): string {
 /**
  * Resolve the base directory for a tenant user.
  *
- * ~/.openclaw/tenants/{tenantId}/users/{userId}/
+ * ~/.enclaws/tenants/{tenantId}/users/{userId}/
  */
 export function resolveTenantUserDir(
   tenantId: string,
@@ -103,8 +103,8 @@ export function resolveTenantUserDir(
 /**
  * Resolve the sessions directory for a tenant user.
  *
- * Multi-tenant: ~/.openclaw/tenants/{tenantId}/users/{userId}/sessions/
- * Single-tenant: ~/.openclaw/agents/{agentId}/sessions/ (unchanged)
+ * Multi-tenant: ~/.enclaws/tenants/{tenantId}/users/{userId}/sessions/
+ * Single-tenant: ~/.enclaws/agents/{agentId}/sessions/ (unchanged)
  */
 export function resolveTenantAgentSessionsDir(
   tenantId: string | undefined,
@@ -126,7 +126,7 @@ export function resolveTenantAgentSessionsDir(
 /**
  * Resolve the session store JSON path for a tenant user.
  *
- * Multi-tenant: ~/.openclaw/tenants/{tenantId}/users/{userId}/sessions/sessions.json
+ * Multi-tenant: ~/.enclaws/tenants/{tenantId}/users/{userId}/sessions/sessions.json
  */
 export function resolveTenantSessionStorePath(
   tenantId: string | undefined,
@@ -170,7 +170,7 @@ export function ensureTenantSessionDirs(tenantId: string, agentId?: string, user
 /**
  * Resolve the tenant user's workspace directory.
  *
- * Multi-tenant: ~/.openclaw/tenants/{tenantId}/users/{userId}/workspace/
+ * Multi-tenant: ~/.enclaws/tenants/{tenantId}/users/{userId}/workspace/
  */
 export function resolveTenantAgentWorkspaceDir(
   tenantId: string,
@@ -188,7 +188,7 @@ export function resolveTenantAgentWorkspaceDir(
 /**
  * Resolve the tenant user's devices directory.
  *
- * Multi-tenant: ~/.openclaw/tenants/{tenantId}/users/{userId}/devices/
+ * Multi-tenant: ~/.enclaws/tenants/{tenantId}/users/{userId}/devices/
  */
 export function resolveTenantDevicesDir(
   tenantId: string,
@@ -203,7 +203,7 @@ export function resolveTenantDevicesDir(
 /**
  * Resolve the tenant user's credentials directory.
  *
- * Multi-tenant: ~/.openclaw/tenants/{tenantId}/users/{userId}/credentials/
+ * Multi-tenant: ~/.enclaws/tenants/{tenantId}/users/{userId}/credentials/
  */
 export function resolveTenantCredentialsDir(
   tenantId: string,
@@ -218,7 +218,7 @@ export function resolveTenantCredentialsDir(
 /**
  * Resolve the tenant user's cron directory.
  *
- * Multi-tenant: ~/.openclaw/tenants/{tenantId}/users/{userId}/cron/
+ * Multi-tenant: ~/.enclaws/tenants/{tenantId}/users/{userId}/cron/
  */
 export function resolveTenantCronDir(
   tenantId: string,
@@ -233,7 +233,7 @@ export function resolveTenantCronDir(
 /**
  * Resolve the tenant user's cron store file path.
  *
- * Multi-tenant: ~/.openclaw/tenants/{tenantId}/users/{userId}/cron/jobs.json
+ * Multi-tenant: ~/.enclaws/tenants/{tenantId}/users/{userId}/cron/jobs.json
  */
 export function resolveTenantCronStorePath(
   tenantId: string,

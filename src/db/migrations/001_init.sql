@@ -132,6 +132,7 @@ CREATE TABLE tenant_channel_apps (
   app_secret   VARCHAR(512) NOT NULL DEFAULT '',
   bot_name     VARCHAR(255) NOT NULL DEFAULT '',
   group_policy VARCHAR(32)  NOT NULL DEFAULT 'open', -- open | allowlist | disabled
+  agent_id     VARCHAR(128),                         -- bound agent logical ID (one-to-many: one agent can bind multiple apps)
   is_active    BOOLEAN      NOT NULL DEFAULT true,
   created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
@@ -140,6 +141,7 @@ CREATE TABLE tenant_channel_apps (
 
 CREATE INDEX idx_channel_apps_channel ON tenant_channel_apps (channel_id);
 CREATE INDEX idx_channel_apps_tenant ON tenant_channel_apps (tenant_id);
+CREATE INDEX idx_channel_apps_agent ON tenant_channel_apps (agent_id) WHERE agent_id IS NOT NULL;
 
 -- ============================================================
 -- 6. Tenant Models (租户级模型配置)
@@ -174,7 +176,6 @@ CREATE TABLE tenant_agents (
   agent_id       VARCHAR(128) NOT NULL,   -- logical agent ID (e.g., "main", "kimi")
   name           VARCHAR(255) NOT NULL,
   config         JSONB        NOT NULL DEFAULT '{}', -- full agent config
-  channel_app_id UUID         REFERENCES tenant_channel_apps(id) ON DELETE SET NULL, -- 关联应用(一对一)
   model_config   JSONB        NOT NULL DEFAULT '[]', -- [{providerId, modelId, isDefault}] ordered list; isDefault=true is primary, rest are fallbacks
   is_active      BOOLEAN      NOT NULL DEFAULT true,
   created_by     UUID         REFERENCES users(id) ON DELETE SET NULL,
@@ -184,7 +185,6 @@ CREATE TABLE tenant_agents (
 );
 
 CREATE INDEX idx_agents_tenant ON tenant_agents (tenant_id);
-CREATE INDEX idx_agents_channel_app ON tenant_agents (channel_app_id);
 
 -- ============================================================
 -- 7. Refresh Tokens (JWT 刷新令牌)
@@ -251,6 +251,7 @@ CREATE TABLE llm_interaction_traces (
   user_id       VARCHAR(255),
   session_key   VARCHAR(512),
   agent_id      VARCHAR(128),
+  channel       VARCHAR(128),
 
   -- 用户轮次分组: 同一次用户提问共享相同turn_id
   turn_id       UUID         NOT NULL,

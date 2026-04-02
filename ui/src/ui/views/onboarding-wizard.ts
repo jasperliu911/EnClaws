@@ -9,36 +9,26 @@ import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { customElement, state, property } from "lit/decorators.js";
 import { t, I18nController } from "../../i18n/index.ts";
 import { tenantRpc } from "./tenant/rpc.ts";
+import { PROVIDER_TYPES } from "../../constants/providers.ts";
+import { CHANNEL_TYPES, CHANNEL_ICON_MAP } from "../../constants/channels.ts";
 
 type WizardStep = "welcome" | "channel" | "model" | "agent" | "done";
 
 const STEPS: WizardStep[] = ["welcome", "model", "agent", "channel", "done"];
 
-const CHANNEL_ICONS: Record<string, string> = {
-  feishu: `<img src="/feishu-logo.svg" width="24" height="24" alt="Feishu" style="object-fit:contain;" />`,
-  wechat: `<img src="/wechat-logo.svg" width="24" height="24" alt="WeChat" style="object-fit:contain;" />`,
-  dingtalk: `<img src="/dingtalk-logo.svg" width="24" height="24" alt="DingTalk" style="object-fit:contain;" />`,
-  slack: `<img src="/slack-logo.svg" width="24" height="24" alt="Slack" style="object-fit:contain;" />`,
-  webchat: `<img src="/webchat-logo.svg" width="24" height="24" alt="WebChat" style="object-fit:contain;" />`,
-};
+const CHANNEL_ICONS: Record<string, string> = Object.fromEntries(
+  Object.entries(CHANNEL_ICON_MAP).map(([k, v]) => [k, `<img src="${v}" width="24" height="24" alt="${k}" style="object-fit:contain;" />`]),
+);
 
-const CHANNEL_OPTIONS = [
-  { type: "feishu", labelKey: "onboarding.channels.feishu" },
-  { type: "wechat", labelKey: "onboarding.channels.wechat" },
-  { type: "dingtalk", labelKey: "onboarding.channels.dingtalk" },
-  { type: "slack", labelKey: "onboarding.channels.slack" },
-  { type: "webchat", labelKey: "onboarding.channels.webchat" },
-];
+const CHANNEL_OPTIONS = CHANNEL_TYPES.map((c) => ({ type: c.value, labelKey: c.labelKey }));
 
-const MODEL_PROVIDERS = [
-  { type: "openai", label: "OpenAI", protocol: "openai-completions", placeholder: "sk-...", baseUrl: "https://api.openai.com/v1" },
-  { type: "anthropic", label: "Anthropic", protocol: "anthropic-messages", placeholder: "sk-ant-...", baseUrl: "https://api.anthropic.com" },
-  { type: "deepseek", label: "DeepSeek", protocol: "openai-completions", placeholder: "sk-...", baseUrl: "https://api.deepseek.com/v1" },
-  { type: "qwen", label: "通义千问 / Qwen", protocol: "openai-completions", placeholder: "sk-...", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1" },
-  { type: "moonshot", label: "Moonshot", protocol: "openai-completions", placeholder: "sk-...", baseUrl: "https://api.moonshot.ai/v1" },
-  { type: "siliconflow", label: "硅基流动 / SiliconFlow", protocol: "openai-completions", placeholder: "sk-...", baseUrl: "https://api.siliconflow.cn/v1" },
-  { type: "custom", label: "自定义 / Custom", protocol: "openai-completions", placeholder: "...", baseUrl: "" },
-];
+const MODEL_PROVIDERS = PROVIDER_TYPES.map((p) => ({
+  type: p.value,
+  label: p.label,
+  protocol: p.defaultProtocol,
+  placeholder: p.placeholder ?? "...",
+  baseUrl: p.defaultBaseUrl,
+}));
 
 @customElement("onboarding-wizard")
 export class OnboardingWizard extends LitElement {
@@ -62,6 +52,8 @@ export class OnboardingWizard extends LitElement {
     .wizard {
       width: 100%;
       max-width: 560px;
+      max-height: 90vh;
+      overflow-y: auto;
       background: var(--card, #141414);
       border: 1px solid var(--border, #262626);
       border-radius: 12px;
@@ -745,6 +737,12 @@ export class OnboardingWizard extends LitElement {
 
       ${this.selectedProvider ? html`
         <div class="form-group">
+          <label>API ${t("onboarding.apiAddress")} <span class="required">*</span></label>
+          <input type="text" .value=${this.modelBaseUrl}
+            @input=${(e: InputEvent) => { this.modelBaseUrl = (e.target as HTMLInputElement).value; }}
+            placeholder="https://api.openai.com/v1" />
+        </div>
+        <div class="form-group">
           <label>API Key <span class="required">*</span></label>
           <div class="secret-wrap">
             <input type="password" .value=${this.modelApiKey}
@@ -756,12 +754,6 @@ export class OnboardingWizard extends LitElement {
               @mouseleave=${(e: Event) => { const wrap = (e.target as HTMLElement).closest('.secret-wrap')!; (wrap.querySelector('input') as HTMLInputElement).type = "password"; }}
             ><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
-        </div>
-        <div class="form-group">
-          <label>API ${t("onboarding.apiAddress")} <span class="required">*</span></label>
-          <input type="text" .value=${this.modelBaseUrl}
-            @input=${(e: InputEvent) => { this.modelBaseUrl = (e.target as HTMLInputElement).value; }}
-            placeholder="https://api.openai.com/v1" />
         </div>
         <div class="form-group">
           <label>${t("onboarding.modelId")} <span class="required">*</span></label>

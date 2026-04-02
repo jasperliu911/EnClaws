@@ -37,7 +37,7 @@ describe("stageSandboxMedia", () => {
       });
 
       {
-        const inboundDir = join(home, ".openclaw", "media", "inbound");
+        const inboundDir = join(home, ".enclaws", "media", "inbound");
         await fs.mkdir(inboundDir, { recursive: true });
         const mediaPath = join(inboundDir, "photo.jpg");
         await fs.writeFile(mediaPath, "test");

@@ -308,7 +308,7 @@ export async function finalizeOnboardingWizard(
     await prompter.note(
       [
         "Gateway token: shared auth for the Gateway + Control UI.",
-        "Stored in: ~/.openclaw/openclaw.json (gateway.auth.token) or OPENCLAW_GATEWAY_TOKEN.",
+        "Stored in: ~/.enclaws/openclaw.json (gateway.auth.token) or ENCLAWS_GATEWAY_TOKEN.",
         `View token: ${formatCliCommand("enclaws config get gateway.auth.token")}`,
         `Generate token: ${formatCliCommand("enclaws doctor --generate-gateway-token")}`,
         "Web UI stores a copy in this browser's localStorage (openclaw.control.settings.v1).",

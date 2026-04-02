@@ -359,7 +359,9 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
       const merged = { ...baseCfg, channels: {} } as OpenClawConfig & {
         channels: Record<string, unknown>;
       };
-      const bindings = Array.isArray(baseCfg.bindings) ? [...baseCfg.bindings] : [];
+      // Start with empty bindings — they are rebuilt entirely from DB each time.
+      // Do NOT inherit from baseCfg.bindings (which may contain stale entries from previous reload).
+      const bindings: Array<{ agentId: string; match: Record<string, unknown> }> = [];
 
       // Build a map from channel_app DB id → { channelType, appId } for binding resolution
       const channelAppIdToInfo = new Map<string, { channelType: string; appId: string }>();
@@ -379,12 +381,18 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
         ]);
         allTenantAgents.push(...agents);
 
+        const allTenantApps = new Map<string, import("../db/types.js").TenantChannelApp>();
+
         for (const ch of channels) {
           if (!ch.isActive || ch.channelPolicy === "disabled") continue;
 
           const apps = await listChannelApps(ch.id);
           const enabledApps = apps.filter((a) => a.isActive && a.groupPolicy !== "disabled");
           if (enabledApps.length === 0) continue;
+
+          for (const app of enabledApps) {
+            allTenantApps.set(app.id, app);
+          }
 
           const channelType = ch.channelType;
           const existing = (merged.channels[channelType] ?? {}) as Record<string, unknown>;
@@ -426,20 +434,18 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
           // console.log(`[loadDbChannels] merged after ${channelType}:`, JSON.stringify(merged, null, 2));
         }
 
-        // Generate bindings from agent.channelAppId (direct 1:1 binding to channel app)
-        for (const agent of agents) {
-          if (!agent.isActive) continue;
-          const agentConfig = agent.config as Record<string, unknown>;
+        // Track which apps already have bindings via app.agentId (new one-to-many)
+        const appBoundByAppAgentId = new Set<string>();
 
-          // Resolve channel app info: use channel_app_id FK (1:1 binding),
-          // fallback to config.channelAppId for legacy data
-          const channelAppDbId = agent.channelAppId
-            ?? (agentConfig?.channelAppId as string | undefined);
-          if (!channelAppDbId) continue;
-          const appInfo = channelAppIdToInfo.get(channelAppDbId);
-          if (!appInfo) continue;
+        // Generate bindings from app.agentId (new: one-to-many, app points to agent)
+        for (const [appDbId, appInfo] of channelAppIdToInfo) {
+          const app = allTenantApps.get(appDbId);
+          if (!app?.agentId) continue;
+          const agent = agents.find((a) => a.agentId === app.agentId && a.isActive);
+          if (!agent) continue;
 
-          // Create a routing binding: channel + accountId → agentId
+          appBoundByAppAgentId.add(appDbId);
+
           bindings.push({
             agentId: agent.agentId,
             match: {
@@ -448,9 +454,7 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
             },
           });
 
-          // Inject per-agent tenantUserId mapping into the account config.
-          // Multiple agents can bind to the same channel app, each with a different createdBy.
-          // After routing resolves the agentId, the bot handler looks up the correct tenantUserId.
+          // Inject per-agent tenantUserId mapping
           const channelAccounts = (
             (merged.channels[appInfo.channelType] ?? {}) as Record<string, unknown>
           ).accounts as Record<string, Record<string, unknown>> | undefined;
@@ -461,11 +465,9 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
               userMap[agent.agentId] = agent.createdBy;
             }
             acct.tenantUserByAgent = userMap;
-            // Keep tenantUserId as fallback (last agent's createdBy)
             acct.tenantUserId = agent.createdBy ?? acct.tenantUserId;
 
-            // Build sender-to-agent mapping from feishuOpenId config.
-            // Allows routing messages to the correct agent based on sender identity.
+            const agentConfig = agent.config as Record<string, unknown>;
             const feishuOpenId = (agentConfig?.feishuOpenId as string)?.trim();
             if (feishuOpenId) {
               const senderMap = (acct.senderToAgent ?? {}) as Record<string, string>;
@@ -474,6 +476,7 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
             }
           }
         }
+
       }
 
       merged.bindings = bindings as OpenClawConfig["bindings"];
@@ -533,7 +536,7 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
       dbChannelsCache = merged;
       // Propagate DB-enriched config to the global loadConfig() singleton so that
       // all code paths (e.g. gateway send handler) resolve channel credentials from
-      // the database rather than falling back to the base openclaw.json config.
+      // the database rather than falling back to the base enclaws.json config.
       setRuntimeConfigSnapshot(merged);
     } catch (err) {
       console.error("[server-channels] failed to load DB channels:", err);

@@ -3,16 +3,28 @@ import type {IconName} from "./icons.js";
 
 export const TAB_GROUPS = [
     {
-        label: "control",
+        label: "",
         tabs: ["overview"],
     },
     {
-        label: "tenant",
-        tabs: ["tenant-settings", "tenant-users", "tenant-models", "tenant-agents", "tenant-channels", "tenant-skills", "tenant-traces"],
+        label: "",
+        tabs: ["tenant-overview"],
     },
     {
-        label: "settings",
-        tabs: ["logs"]
+        label: "workspace",
+        tabs: ["tenant-agents", "chat", "sessions", "sandbox"],
+    },
+    {
+        label: "resources",
+        tabs: ["tenant-channels", "tenant-skills", "tenant-models", "nodes"],
+    },
+    {
+        label: "enterprise",
+        tabs: ["tenant-settings", "tenant-users", "tenant-usage", "tenant-traces"],
+    },
+    {
+        label: "system",
+        tabs: ["instances", "cron", "logs", "config", "debug"],
     },
 ] as const;
 
@@ -37,6 +49,7 @@ export type Tab =
     | "tenant-agents"
     | "tenant-channels"
     | "tenant-skills"
+    | "tenant-overview"
     | "tenant-traces"
     | "tenant-usage";
 
@@ -55,6 +68,7 @@ const TAB_PATHS: Record<Tab, string> = {
     debug: "/debug",
     sandbox: "/sandbox",
     logs: "/logs",
+    "tenant-overview": "/tenant-overview",
     "tenant-settings": "/tenant-settings",
     "tenant-users": "/tenant-users",
     "tenant-models": "/tenant-models",
@@ -176,6 +190,8 @@ export function iconForTab(tab: Tab): IconName {
             return "puzzle";
         case "logs":
             return "scrollText";
+        case "tenant-overview":
+            return "barChart";
         case "tenant-settings":
             return "settings";
         case "tenant-users":

@@ -6,7 +6,7 @@ import {describe, it, expect, beforeAll, afterAll} from "vitest";
 import {TestEnv} from "../index.js";
 
 const GATEWAY_URL = process.env.TEST_GATEWAY_URL ?? "ws://127.0.0.1:18789";
-const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN ?? "";
+const GATEWAY_TOKEN = process.env.ENCLAWS_GATEWAY_TOKEN ?? "";
 
 describe("full setup → chat", () => {
     const env = new TestEnv({url: GATEWAY_URL, gatewayToken: GATEWAY_TOKEN});
