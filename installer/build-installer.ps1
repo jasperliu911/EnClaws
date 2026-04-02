@@ -280,7 +280,7 @@ Write-Host "[*] Cleaning up bundle..." -ForegroundColor Yellow
 # Patterns for both flat packages (node_modules/pkg/) and scoped packages (node_modules/@scope/pkg/)
 $cleanNames = @("*.md", "CHANGELOG*", "HISTORY*", ".github", "test", "tests",
     "__tests__", "example", "examples", ".travis.yml", ".eslintrc*", ".prettierrc*", "tsconfig.json",
-    "*.map", "doc", "docs")
+    "*.map")
 $cleanPatterns = @()
 foreach ($name in $cleanNames) {
     $cleanPatterns += "node_modules\*\$name"

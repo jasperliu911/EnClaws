@@ -44,7 +44,7 @@ fi
 
 if [[ "$SKIP_BUILD" != "1" ]]; then
   echo "[*] Installing dependencies..."
-  (cd "$ROOT_DIR" && pnpm install --config.node-linker=hoisted)
+  (cd "$ROOT_DIR" && pnpm install --frozen-lockfile --config.node-linker=hoisted)
 
   echo "[*] Building JS..."
   (cd "$ROOT_DIR" && pnpm build)
@@ -134,30 +134,108 @@ DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"
 NODE="$DIR/node/bin/node"
 ENTRY="$DIR/enclaws.mjs"
 PORT="${ENCLAWS_GATEWAY_PORT:-18888}"
+PID_FILE="$HOME/.enclaws/gateway.pid"
+
+LOADING="$DIR/loading.html"
+
+# If gateway is already running, just open dashboard and exit
+if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+  open "http://localhost:$PORT"
+  exit 0
+fi
+if curl -s -o /dev/null "http://localhost:$PORT" 2>/dev/null; then
+  open "http://localhost:$PORT"
+  exit 0
+fi
+
+# Show loading page immediately (gateway not ready yet)
+open "file://${LOADING}?port=${PORT}"
+
+# Create symlink to /usr/local/bin so "enclaws" works in terminal
+CLI="$DIR/enclaws"
+if [ ! -L /usr/local/bin/enclaws ] || [ "$(readlink /usr/local/bin/enclaws)" != "$CLI" ]; then
+  if ln -sf "$CLI" /usr/local/bin/enclaws 2>/dev/null; then
+    true
+  else
+    # No permission — ask user to authorize via macOS password dialog
+    ESCAPED_CLI=$(printf '%s' "$CLI" | sed "s/'/'\\\\''/g")
+    osascript -e "do shell script \"mkdir -p /usr/local/bin && ln -sf '${ESCAPED_CLI}' /usr/local/bin/enclaws\" with administrator privileges" 2>/dev/null || true
+  fi
+fi
 
 # Run postinstall if first launch
 if [ ! -f "$HOME/.enclaws/.env" ]; then
   "$NODE" "$DIR/scripts/postinstall.js" 2>/dev/null || true
 fi
 
-# Start gateway in background
-"$NODE" "$ENTRY" gateway --port "$PORT" &
+# Start gateway as detached background process
+# Launcher exits immediately so clicking the icon again works
+mkdir -p "$HOME/.enclaws"
+nohup "$NODE" "$ENTRY" gateway --port "$PORT" --no-open </dev/null >"$HOME/.enclaws/gateway.log" 2>&1 &
 GATEWAY_PID=$!
-
-# Wait for gateway to be ready, then open browser
-for i in $(seq 1 30); do
-  if curl -s "http://localhost:$PORT" >/dev/null 2>&1; then
-    open "http://localhost:$PORT"
-    break
-  fi
-  sleep 1
-done
-
-# Keep running until gateway exits
-wait $GATEWAY_PID
+echo "$GATEWAY_PID" > "$PID_FILE"
 LAUNCHER
 
 chmod +x "$APP_MACOS/enclaws-launcher"
+
+# ---------------------------------------------------------------------------
+# Step 3b-2: Write loading.html (shown while gateway starts)
+# ---------------------------------------------------------------------------
+
+cat > "$APP_RESOURCES/loading.html" << 'LOADING'
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>EnClaws</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0a0e27 0%, #1a1040 50%, #0d1b3e 100%);
+    color: #fff;
+    font-family: -apple-system, "PingFang SC", sans-serif;
+  }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 4px solid rgba(255,255,255,0.15);
+    border-top-color: #a78bfa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 28px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  h1 { font-size: 22px; font-weight: 500; margin-bottom: 10px; }
+  p { font-size: 14px; color: rgba(255,255,255,0.5); }
+  .status { margin-top: 24px; font-size: 13px; color: rgba(255,255,255,0.35); }
+</style>
+</head>
+<body>
+  <div class="spinner"></div>
+  <h1>EnClaws 正在启动...</h1>
+  <p>网关启动后将自动跳转控制面板</p>
+  <div class="status" id="status">正在连接...</div>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const port = params.get('port') || 18888;
+  const url = `http://localhost:${port}`;
+  let attempts = 0;
+  function check() {
+    attempts++;
+    document.getElementById('status').textContent = `第 ${attempts} 次检测...`;
+    fetch(url, { mode: 'no-cors' })
+      .then(() => { window.location.href = url; })
+      .catch(() => { setTimeout(check, 1500); });
+  }
+  check();
+</script>
+</body>
+</html>
+LOADING
 
 # ---------------------------------------------------------------------------
 # Step 3c: Write CLI wrapper (for terminal: enclaws gateway)
@@ -276,8 +354,9 @@ SYSTEM_NODE="$(command -v node)"
 SYSTEM_NPM="$(command -v npm)"
 
 "$SYSTEM_NODE" --input-type=commonjs -e "
-  const pkg = JSON.parse(require('fs').readFileSync('$ROOT_DIR/package.json', 'utf-8'));
-  const prod = {
+  var fs = require('fs');
+  var pkg = JSON.parse(fs.readFileSync(process.argv[1], 'utf-8'));
+  var prod = {
     name: pkg.name,
     version: pkg.version,
     type: pkg.type,
@@ -286,8 +365,8 @@ SYSTEM_NPM="$(command -v npm)"
     dependencies: pkg.dependencies
   };
   if (pkg.optionalDependencies) prod.optionalDependencies = pkg.optionalDependencies;
-  require('fs').writeFileSync('$APP_RESOURCES/package.json', JSON.stringify(prod, null, 2));
-"
+  fs.writeFileSync(process.argv[2], JSON.stringify(prod, null, 2));
+" "$ROOT_DIR/package.json" "$APP_RESOURCES/package.json"
 
 echo "[*] Installing production dependencies (this may take a few minutes)..."
 # Set target architecture for native modules (sharp, koffi, node-pty etc.)
@@ -307,7 +386,7 @@ echo "[OK] Dependencies installed (target: darwin-${TARGET_NPM_ARCH})"
 
 echo "[*] Cleaning up..."
 CLEAN_NAMES=("*.md" "CHANGELOG*" "HISTORY*" ".github" "test" "tests" "__tests__" \
-  "example" "examples" ".travis.yml" ".eslintrc*" ".prettierrc*" "tsconfig.json" "*.map" "doc" "docs")
+  "example" "examples" ".travis.yml" ".eslintrc*" ".prettierrc*" "tsconfig.json" "*.map")
 for name in "${CLEAN_NAMES[@]}"; do
   find "$APP_RESOURCES/node_modules" -maxdepth 3 -name "$name" -exec rm -rf {} + 2>/dev/null || true
 done
