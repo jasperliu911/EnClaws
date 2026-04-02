@@ -127,6 +127,32 @@ if (-not $SkipBuild) {
 }
 
 # ---------------------------------------------------------------------------
+# Step 2b: Prepare skill pack (clone feishu-skills)
+# ---------------------------------------------------------------------------
+
+$SkillPackDir = Join-Path $ProjectRoot "skills-pack"
+$SkillPackGitUrl = "https://github.com/hashSTACS-Global/feishu-skills.git"
+
+if (Test-Path (Join-Path $SkillPackDir ".git")) {
+    Write-Host "[*] skills-pack/ exists, pulling latest..." -ForegroundColor Yellow
+    Push-Location $SkillPackDir
+    try {
+        git pull --ff-only
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[!] git pull failed; using existing skills-pack/" -ForegroundColor Yellow
+        }
+    } finally {
+        Pop-Location
+    }
+} else {
+    Write-Host "[*] Cloning feishu-skills into skills-pack/..." -ForegroundColor Yellow
+    if (Test-Path $SkillPackDir) { Remove-Item -Recurse -Force $SkillPackDir }
+    git clone --depth 1 $SkillPackGitUrl $SkillPackDir
+    if ($LASTEXITCODE -ne 0) { throw "git clone feishu-skills failed" }
+}
+Write-Host "[OK] Skill pack ready" -ForegroundColor Green
+
+# ---------------------------------------------------------------------------
 # Step 3: Prepare app bundle
 # ---------------------------------------------------------------------------
 
@@ -157,7 +183,7 @@ foreach ($f in $filesToCopy) {
 }
 
 # Copy directories
-$dirsToCopy = @("dist", "extensions", "skills", "assets", "scripts")
+$dirsToCopy = @("dist", "extensions", "skills", "skills-pack", "assets", "scripts")
 foreach ($d in $dirsToCopy) {
     $src = Join-Path $ProjectRoot $d
     $dest = Join-Path $AppBundleDir $d

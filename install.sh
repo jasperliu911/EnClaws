@@ -1412,6 +1412,48 @@ setup_sqlite_db() {
     ui_success "SQLite database configured: ${db_path}"
 }
 
+# ─── Skill pack (feishu-skills) ───────────────────────────────────────────────
+
+setup_skill_pack() {
+    local repo_dir="$1"
+    local skill_pack_dir="$repo_dir/skills-pack"
+    local env_file="$repo_dir/.env"
+    local git_url="https://github.com/hashSTACS-Global/feishu-skills.git"
+
+    # Already configured — skip
+    if [[ -f "$env_file" ]] && grep -q "SKILL_PACK_LOCAL_DIR" "$env_file" 2>/dev/null; then
+        ui_info "Skill pack config already present; skipping"
+        return 0
+    fi
+
+    # Clone or pull
+    if [[ -d "$skill_pack_dir/.git" ]]; then
+        ui_info "skills-pack/ exists, pulling latest..."
+        git -C "$skill_pack_dir" pull --ff-only 2>/dev/null || ui_warn "git pull failed; using existing skills-pack/"
+    else
+        ui_info "Cloning feishu-skills into skills-pack/..."
+        if git clone --depth 1 "$git_url" "$skill_pack_dir" 2>/dev/null; then
+            ui_success "Skill pack cloned"
+        else
+            ui_warn "git clone feishu-skills failed; SKILL_PACK_LOCAL_DIR will be empty (fallback to runtime clone)"
+            skill_pack_dir=""
+        fi
+    fi
+
+    # Append skill pack config to .env
+    {
+        echo ""
+        echo "# Skill pack auto-install (tenant onboarding)"
+        echo "SKILL_PACK_AUTO_INSTALL=true"
+        echo "SKILL_PACK_LOCAL_DIR=${skill_pack_dir}"
+        echo "SKILL_PACK_GIT_URL=${git_url}"
+    } >> "$env_file"
+
+    if [[ -n "$skill_pack_dir" ]]; then
+        ui_success "Skill pack configured: ${skill_pack_dir}"
+    fi
+}
+
 # ─── Check / uninstall existing installation ─────────────────────────────────
 
 check_existing_enclaws() {
@@ -1601,6 +1643,9 @@ main() {
 
     # Configure SQLite as default database
     setup_sqlite_db "$repo_dir"
+
+    # Clone and configure skill pack
+    setup_skill_pack "$repo_dir"
 
     local installed_version
     installed_version=$(resolve_enclaws_version)

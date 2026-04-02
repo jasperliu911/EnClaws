@@ -57,6 +57,9 @@ apps/ios/*.xcfilelist
 # Vendor build artifacts
 vendor/a2ui/renderers/lit/dist/
 src/canvas-host/a2ui/*.bundle.js
+
+# Skill pack (cloned at build time, bundled into installers)
+skills-pack/
 src/canvas-host/a2ui/*.map
 .bundle.hash
 

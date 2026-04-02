@@ -38,13 +38,21 @@ if (existsSync(envPath)) {
 
 const dbPath = join(stateDir, "data.db").replace(/\\/g, "/");
 
+// Resolve the bundled skill-pack directory (lives next to scripts/ in the package)
+const skillPackDir = join(appDir, "skills-pack").replace(/\\/g, "/");
+
 const content = `# EnClaws — auto-generated at install time
 # Edit freely. This file is never overwritten by reinstall / upgrade.
 
-OPENCLAW_DB_URL=sqlite:///${dbPath}
-OPENCLAW_GATEWAY_PORT=18888
-OPENCLAW_CONTROL_UI_DISABLE_DEVICE_AUTH=true
-OPENCLAW_CONTROL_UI_ALLOWED_ORIGINS=http://localhost:18888,http://127.0.0.1:18888
+ENCLAWS_DB_URL=sqlite:///${dbPath}
+ENCLAWS_GATEWAY_PORT=18888
+ENCLAWS_CONTROL_UI_DISABLE_DEVICE_AUTH=true
+ENCLAWS_CONTROL_UI_ALLOWED_ORIGINS=http://localhost:18888,http://127.0.0.1:18888
+
+# Skill pack auto-install (tenant onboarding)
+SKILL_PACK_AUTO_INSTALL=true
+SKILL_PACK_LOCAL_DIR=${skillPackDir}
+SKILL_PACK_GIT_URL=https://github.com/hashSTACS-Global/feishu-skills.git
 `;
 
 try {
