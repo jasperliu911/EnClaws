@@ -692,7 +692,7 @@ describe("chrome extension relay server", () => {
           return;
         }
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ Browser: "OpenClaw/extension-relay" }));
+        res.end(JSON.stringify({ Browser: "EnClaws/extension-relay" }));
         return;
       }
       if (req.url?.startsWith("/extension/status")) {

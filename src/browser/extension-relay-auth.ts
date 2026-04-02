@@ -1,9 +1,9 @@
 import { createHmac } from "node:crypto";
 import { loadConfig } from "../config/config.js";
 
-const RELAY_TOKEN_CONTEXT = "openclaw-extension-relay-v1";
+const RELAY_TOKEN_CONTEXT = "enclaws-extension-relay-v1";
 const DEFAULT_RELAY_PROBE_TIMEOUT_MS = 500;
-const ENCLAWS_RELAY_BROWSER = "OpenClaw/extension-relay";
+const ENCLAWS_RELAY_BROWSER = "EnClaws/extension-relay";
 
 function resolveGatewayAuthToken(): string | null {
   const envToken =
