@@ -188,7 +188,8 @@ foreach ($d in $dirsToCopy) {
     $src = Join-Path $ProjectRoot $d
     $dest = Join-Path $AppBundleDir $d
     if (Test-Path $src) {
-        Copy-Item $src $dest -Recurse
+        # Use robocopy to handle long paths that exceed Windows MAX_PATH (260 chars)
+        robocopy $src $dest /E /NFL /NDL /NJH /NJS /NP | Out-Null
         Write-Host "    Copied $d/" -ForegroundColor Gray
     } else {
         Write-Host "[!] Missing directory: $d/" -ForegroundColor Yellow
