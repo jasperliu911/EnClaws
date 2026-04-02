@@ -16,7 +16,7 @@ export const TAB_GROUPS = [
     },
     {
         label: "resources",
-        tabs: ["tenant-channels", "tenant-skills", "tenant-models", "nodes"],
+        tabs: ["tenant-channels", "tenant-skills", "tenant-models"],
     },
     {
         label: "enterprise",
@@ -24,7 +24,7 @@ export const TAB_GROUPS = [
     },
     {
         label: "system",
-        tabs: ["instances", "cron", "logs", "config", "debug"],
+        tabs: ["instances", "cron", "logs", "debug"],
     },
 ] as const;
 
