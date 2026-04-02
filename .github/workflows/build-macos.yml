@@ -1,0 +1,99 @@
+name: Build macOS App
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_config:
+        description: "Build configuration"
+        required: false
+        default: "release"
+        type: choice
+        options:
+          - debug
+          - release
+      build_archs:
+        description: "Architectures (arm64, x86_64, or all)"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - arm64
+          - x86_64
+      create_dmg:
+        description: "Also create DMG installer"
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.23.0"
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: Cache Swift build
+        uses: actions/cache@v4
+        with:
+          path: apps/macos/.build
+          key: swift-${{ runner.os }}-${{ hashFiles('apps/macos/Package.swift', 'apps/shared/OpenClawKit/Package.swift', 'Swabble/Package.swift') }}
+          restore-keys: swift-${{ runner.os }}-
+
+      - name: Build macOS App
+        env:
+          BUILD_CONFIG: ${{ inputs.build_config }}
+          BUILD_ARCHS: ${{ inputs.build_archs }}
+          BUNDLE_ID: ai.enclaws.mac
+          ALLOW_ADHOC_SIGNING: "1"
+          SKIP_NOTARIZE: "1"
+          ALLOW_MISSING_TEXTUAL_BUNDLE: "1"
+        run: |
+          if [ "${{ inputs.create_dmg }}" = "true" ]; then
+            bash scripts/package-mac-dist.sh
+          else
+            bash scripts/package-mac-app.sh
+          fi
+
+      - name: Compress .app
+        run: |
+          cd dist
+          ditto -c -k --sequesterRsrc --keepParent EnClaws.app EnClaws.app.zip
+
+      - name: Upload .app
+        uses: actions/upload-artifact@v4
+        with:
+          name: EnClaws-macOS-app
+          path: dist/EnClaws.app.zip
+
+      - name: Upload .dmg
+        if: inputs.create_dmg
+        uses: actions/upload-artifact@v4
+        with:
+          name: EnClaws-macOS-dmg
+          path: dist/EnClaws-*.dmg
+          if-no-files-found: warn
