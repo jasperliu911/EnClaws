@@ -78,6 +78,7 @@ jobs:
           BUNDLE_ID: ai.enclaws.mac
           ALLOW_ADHOC_SIGNING: '1'
           ALLOW_MISSING_TEXTUAL_BUNDLE: '1'
+          SKIP_TEAM_ID_CHECK: '1'
           APP_VERSION: ${{ inputs.app_version }}
         run: bash scripts/package-mac-app.sh
 
