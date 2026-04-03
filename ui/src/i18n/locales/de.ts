@@ -654,6 +654,7 @@ export const de: TranslationMap = {
   tenantSkills: {
     title: "Skill Store",
     subtitle: "Multi-Tenant-Funktion in Entwicklung, bleiben Sie dran",
+    skillAccess: "Skill-Zugriff",
     refresh: "Aktualisieren",
     loading: "Wird geladen...",
     skillName: "Skill-Name:",
