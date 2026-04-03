@@ -68,8 +68,8 @@ A comprehensive look at EnClaws internals — how messages flow, how tenants are
 │                          Storage Layer                                  │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────┐  ┌───────────────┐  │
 │  │ PostgreSQL   │  │   SQLite     │  │ LanceDB  │  │  File System  │  │
-│  │ (multi-      │  │  (single-    │  │ (vector  │  │ (tenant-      │  │
-│  │  tenant)     │  │   tenant)    │  │  memory) │  │  isolated)    │  │
+│  │ (multi-      │  │  (light-     │  │ (vector  │  │ (tenant-      │  │
+│  │  tenant)     │  │   weight)    │  │  memory) │  │  isolated)    │  │
 │  └──────────────┘  └──────────────┘  └──────────┘  └───────────────┘  │
 └─────────────────────────────────────────────────────────────────────────┘
                                  │

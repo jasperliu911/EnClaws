@@ -220,34 +220,109 @@ This belongs in the roadmap section because it is a direction, not a launch-day 
 
 ## How it works (short)
 
-```text
-Users / Teams / Enterprise Systems
-                 │
-                 ▼
-   Assistant Runtime + Control Plane
-                 │
-      ┌──────────┼──────────┬──────────┐
-      ▼          ▼          ▼          ▼
- Concurrency   Memory      Skills    Audit
-                 │
-                 ▼
-      Web management panel and enterprise surfaces
+### System architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            Client Layer                                 │
+│         Web Control UI   ·   CLI / TUI   ·   macOS / iOS / Android     │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │
+┌────────────────────────────────▼────────────────────────────────────────┐
+│                       Channel Layer — 41+ Integrations                  │
+│                                                                         │
+│   Feishu    DingTalk    WeCom    Telegram    Discord    Slack           │
+│   WhatsApp    Teams    Matrix    Signal    LINE    Mattermost    ...    │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │
+┌────────────────────────────────▼────────────────────────────────────────┐
+│                            Gateway Layer                                │
+│                                                                         │
+│   ┌─────────────┐  ┌─────────────┐  ┌──────────────────────────────┐   │
+│   │  WebSocket   │  │    HTTP     │  │  Authentication & Authorization│  │
+│   │   Server     │  │   Server    │  │   JWT + 5-Level RBAC          │  │
+│   └──────┬───────┘  └──────┬──────┘  │   Method-scoped permissions   │  │
+│          │                 │         └──────────────┬───────────────┘   │
+│          └─────────┬───────┘                        │                   │
+│                    │                                │                   │
+│   ┌────────────────▼────────────────────────────────▼────────────────┐  │
+│   │  Tenant Router ──→ Session Resolver ──→ Channel Manager         │  │
+│   │  Plugin Manager                         Cron Service            │  │
+│   └─────────────────────────────┬───────────────────────────────────┘  │
+└─────────────────────────────────┼───────────────────────────────────────┘
+                                  │
+┌─────────────────────────────────▼───────────────────────────────────────┐
+│                            Core Engine                                  │
+│                                                                         │
+│   ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐     │
+│   │   Message     │  │    Reply     │  │    Agent Runner          │     │
+│   │   Dispatch    │  │    Engine    │  │    (pi-embedded-runner)  │     │
+│   └──────┬────────┘  └──────┬───────┘  └──────────┬──────────────┘     │
+│          │                  │                      │                    │
+│          └──────────┬───────┘                      │                    │
+│                     │                              │                    │
+│   ┌─────────────────▼──────────────────────────────▼─────────────────┐  │
+│   │              StreamFn Execution Pipeline                         │  │
+│   │        pre-process → LLM call → tool execution → post-process   │  │
+│   └─────────────────────────────┬────────────────────────────────────┘  │
+│                                 │                                      │
+│   ┌───────────┐  ┌──────────────▼──┐  ┌─────────────────────────────┐  │
+│   │  60+ Tools │  │  55 Skills      │  │  ACP — Concurrent Executor  │  │
+│   │            │  │  (overridable)  │  │  100+ parallel tasks        │  │
+│   └────────────┘  └─────────────────┘  └─────────────────────────────┘  │
+└─────────────────────────────────┬───────────────────────────────────────┘
+                                  │
+              ┌───────────────────┼───────────────────┐
+              │                   │                   │
+┌─────────────▼──────┐ ┌─────────▼─────────┐ ┌───────▼───────────────────┐
+│    LLM Providers    │ │   Storage Layer    │ │     Observability         │
+│                     │ │                    │ │                           │
+│  Anthropic Claude   │ │  PostgreSQL        │ │  Interaction Traces       │
+│  OpenAI GPT-4       │ │   (multi-tenant)   │ │   prompt/completion/cost  │
+│  Google Gemini      │ │  SQLite            │ │  Audit Logs               │
+│  DeepSeek           │ │   (lightweight)    │ │   who/what/when           │
+│  Qwen               │ │  LanceDB           │ │  Token Usage Analytics    │
+│  Moonshot           │ │   (vector memory)  │ │   7d/30d trends           │
+│  Ollama (local)     │ │  File System       │ │   user/agent/model ranks  │
+│                     │ │   (tenant-isolated)│ │                           │
+└─────────────────────┘ └────────────────────┘ └───────────────────────────┘
 ```
 
-A slightly more detailed mental model:
+### Message lifecycle
 
-```text
-Enterprise users + business systems + work events
-                      │
-                      ▼
-      containerized assistant runtime and scheduler
-                      │
-          ┌───────────┼───────────┬───────────┐
-          ▼           ▼           ▼           ▼
-     isolation     memory      skills    monitoring
-                      │
-                      ▼
-           evidence, replay, operations, action
+```
+ User (Feishu / Discord / ...)
+   │
+   │  ① Send message
+   ▼
+ Channel Adapter ──→ normalize to internal format
+   │
+   │  ② Authenticate
+   ▼
+ Gateway ──→ JWT verification + RBAC check
+   │
+   │  ③ Route
+   ▼
+ Tenant Router ──→ extract tenant from channel metadata
+   │               load tenant config from PostgreSQL
+   │
+   │  ④ Dispatch
+   ▼
+ Agent Runtime ──→ load SOUL.md + TOOLS.md + MEMORY.md + Skills
+   │
+   │  ⑤ Reason
+   ▼
+ LLM Provider ──→ prompt + context → stream response
+   │               ↕ tool calls (execute → feed back → re-call)
+   │
+   │  ⑥ Reply
+   ▼
+ Channel Adapter ──→ format reply (text / card / file / image)
+   │
+   │  ⑦ Observe
+   ▼
+ Interaction Tracer ──→ record prompt, completion, tokens, cost
+ Audit Logger ──→ log event for compliance
 ```
 
 ## North Star
