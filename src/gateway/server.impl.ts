@@ -847,7 +847,6 @@ export async function startGatewayServer(
   const stopGatewayUpdateCheck = minimalTestGateway
     ? () => {}
     : scheduleGatewayUpdateCheck({
-        cfg: cfgAtStart,
         log,
         isNixMode,
         onUpdateAvailableChange: (updateAvailable) => {

@@ -10,12 +10,12 @@ import { detectPackageManager as detectPackageManagerImpl } from "./detect-packa
 import { readPackageName, readPackageVersion } from "./package-json.js";
 import { trimLogTail } from "./restart-sentinel.js";
 import {
-  channelToNpmTag,
-  DEFAULT_PACKAGE_CHANNEL,
+  trackToNpmTag,
+  DEFAULT_PACKAGE_TRACK,
   DEV_BRANCH,
   isBetaTag,
   isStableTag,
-  type UpdateChannel,
+  type UpdateTrack,
 } from "./update-channels.js";
 import { compareSemverStrings } from "./update-check.js";
 import {
@@ -73,7 +73,7 @@ type UpdateRunnerOptions = {
   cwd?: string;
   argv1?: string;
   tag?: string;
-  channel?: UpdateChannel;
+  track?: UpdateTrack;
   timeoutMs?: number;
   runCommand?: CommandRunner;
   progress?: UpdateStepProgress;
@@ -388,7 +388,7 @@ export async function runGatewayUpdate(opts: UpdateRunnerOptions = {}): Promise<
     });
     const beforeSha = beforeShaResult.stdout.trim() || null;
     const beforeVersion = await readPackageVersion(gitRoot);
-    const channel: UpdateChannel = opts.channel ?? "dev";
+    const channel: UpdateTrack = opts.track ?? "dev";
     const branch = channel === "dev" ? await readBranchName(runCommand, gitRoot, timeoutMs) : null;
     const needsCheckoutMain = channel === "dev" && branch !== DEV_BRANCH;
     gitTotalSteps = channel === "dev" ? (needsCheckoutMain ? 11 : 10) : 9;
@@ -873,8 +873,8 @@ export async function runGatewayUpdate(opts: UpdateRunnerOptions = {}): Promise<
       globalRoot: path.dirname(pkgRoot),
       packageName,
     });
-    const channel = opts.channel ?? DEFAULT_PACKAGE_CHANNEL;
-    const tag = normalizeTag(opts.tag ?? channelToNpmTag(channel));
+    const channel = opts.track ?? DEFAULT_PACKAGE_TRACK;
+    const tag = normalizeTag(opts.tag ?? trackToNpmTag(channel));
     const spec = `${packageName}@${tag}`;
     const steps: UpdateStepResult[] = [];
     const updateStep = await runStep({

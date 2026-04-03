@@ -560,8 +560,11 @@ export function renderApp(state: AppViewState) {
                           availableUpdate
                                   ? html`
                                       <div class="update-banner callout danger" role="alert">
-                                          <strong>Update available:</strong> v${availableUpdate.latestVersion}
-                                          (running v${availableUpdate.currentVersion}).
+                                          <strong>Update available:</strong>
+                                          ${availableUpdate.channel === "git"
+                                                  ? html`${availableUpdate.latestVersion}`
+                                                  : html`v${availableUpdate.latestVersion}
+                                                      (running v${availableUpdate.currentVersion})`}.
                                           <button
                                                   class="btn btn--sm update-banner__btn"
                                                   ?disabled=${state.updateRunning || !state.connected}
