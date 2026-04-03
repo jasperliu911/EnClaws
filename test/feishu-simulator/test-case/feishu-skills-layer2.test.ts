@@ -7,13 +7,13 @@
  *
  * Prerequisites:
  * - Gateway running with Lark plugin connected
- * - Test data JSON files in test-data/feishu-skills/ with valid appId/appSecret/userOpenId
+ * - Test data JSON files in test-data/feishu-skills-layer2/ with valid appId/appSecret/userOpenId
  *
  * Usage:
- *   pnpm vitest run test/feishu-simulator/test-case/feishu-skills.test.ts
+ *   pnpm vitest run test/feishu-simulator/test-case/feishu-skills-layer2.test.ts
  *
  * Environment variables:
- *   TEST_DATA_DIR        — test data directory (default: test-data/feishu-skills)
+ *   TEST_DATA_DIR        — test data directory (default: test-data/feishu-skills-layer2)
  *   TEST_CSV_OUTPUT      — CSV report path
  *   TEST_CONCURRENCY     — parallel file count (default: 1, sequential for skill tests)
  *   TEST_REPLY_TIMEOUT   — bot reply timeout ms (default: 120000, longer for LLM)
@@ -32,7 +32,7 @@ const SIMULATOR_DIR = path.resolve(new URL(".", import.meta.url).pathname.replac
 describe("feishu-skills (e2e)", () => {
   it("run feishu-skills test cases", async () => {
     const { errors } = await runTestFiles({
-      dataDir: process.env.TEST_DATA_DIR ?? path.join(SIMULATOR_DIR, "test-data/feishu-skills"),
+      dataDir: process.env.TEST_DATA_DIR ?? path.join(SIMULATOR_DIR, "test-data/feishu-skills-layer2"),
       csvOutput: process.env.TEST_CSV_OUTPUT
         ?? path.join(SIMULATOR_DIR, `test-results/feishu-skills-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.csv`),
       continueOnFailure: true,
