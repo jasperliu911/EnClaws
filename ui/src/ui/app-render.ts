@@ -557,7 +557,12 @@ export function renderApp(state: AppViewState) {
 
               <main class="content ${isChat ? "content--chat" : ""}">
                   ${
-                          availableUpdate
+                          state.updateMessage
+                                  ? html`
+                                      <div class="update-banner callout success" role="alert">
+                                          <strong>${state.updateMessage}</strong>
+                                      </div>`
+                                  : availableUpdate
                                   ? html`
                                       <div class="update-banner callout danger" role="alert">
                                           <strong>Update available:</strong>
