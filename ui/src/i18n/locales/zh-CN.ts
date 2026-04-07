@@ -101,6 +101,8 @@ export const zh_CN: TranslationMap = {
     successRestarting: "更新成功，服务正在重启，请稍后刷新页面。",
     commitsBehind: "落后远程 {count} 个提交",
     dirtyWorkspace: "更新跳过：工作区有未提交的改动，请先提交或暂存后重试。",
+    ebusyRestarting: "文件被占用，正在重启服务后自动重试更新…",
+    failed: "更新失败：{reason}",
     close: "关闭",
   },
   platformModels: {

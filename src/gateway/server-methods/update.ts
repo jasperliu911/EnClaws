@@ -8,6 +8,7 @@ import {
 import { scheduleGatewaySigusr1Restart } from "../../infra/restart.js";
 import { runGatewayUpdate } from "../../infra/update-runner.js";
 import { getStoredUpdateTrack } from "../../infra/update-settings.js";
+import { markPendingUpdateRetry } from "../../infra/update-startup.js";
 import { formatControlPlaneActor, resolveControlPlaneActor } from "../control-plane-audit.js";
 import { validateUpdateRunParams } from "../protocol/index.js";
 import { parseRestartRequestParams } from "./restart-request.js";
@@ -91,17 +92,29 @@ export const updateHandlers: GatewayRequestHandlers = {
       sentinelPath = null;
     }
 
-    // Only restart the gateway when the update actually succeeded.
-    // Restarting after a failed update leaves the process in a broken state
-    // (corrupted node_modules, partial builds) and causes a crash loop.
+    // Restart the gateway after update:
+    // - On success: restart to load updated code
+    // - On Windows EBUSY failure (package mode): restart to release file locks,
+    //   so the next auto-update retry can succeed
     // For git mode, add extra delay to ensure build output is fully flushed.
-    // The run-loop handles SIGUSR1 as an in-process restart (no supervisor needed).
+    const isWindowsEbusy =
+      process.platform === "win32" &&
+      result.status === "error" &&
+      result.mode !== "git" &&
+      result.steps?.some((s) => s.stderrTail?.includes("EBUSY"));
+    if (isWindowsEbusy) {
+      // Mark for retry on next startup — after restart, file locks are released
+      const version = result.after?.version ?? result.before?.version;
+      if (version) {
+        await markPendingUpdateRetry(version, storedTrack ?? "stable");
+      }
+    }
+    const shouldRestart = result.status === "ok" || isWindowsEbusy;
     const effectiveDelayMs = result.mode === "git" ? Math.max(restartDelayMs, 3000) : restartDelayMs;
-    const restart =
-      result.status === "ok"
+    const restart = shouldRestart
         ? scheduleGatewaySigusr1Restart({
             delayMs: effectiveDelayMs,
-            reason: "update.run",
+            reason: isWindowsEbusy ? "update.run (ebusy-retry)" : "update.run",
             audit: {
               actor: actor.actor,
               deviceId: actor.deviceId,

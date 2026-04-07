@@ -24,6 +24,9 @@ type UpdateCheckState = {
   autoLastAttemptAt?: string;
   autoLastSuccessVersion?: string;
   autoLastSuccessAt?: string;
+  /** Set when npm install fails with EBUSY on Windows; cleared after retry on next startup. */
+  pendingRetryVersion?: string;
+  pendingRetryTag?: string;
 };
 
 type AutoUpdatePolicy = {
@@ -148,6 +151,15 @@ async function readState(statePath: string): Promise<UpdateCheckState> {
 async function writeState(statePath: string, state: UpdateCheckState): Promise<void> {
   await fs.mkdir(path.dirname(statePath), { recursive: true });
   await fs.writeFile(statePath, JSON.stringify(state, null, 2), "utf-8");
+}
+
+/** Mark that npm install failed with EBUSY; the next startup should retry. */
+export async function markPendingUpdateRetry(version: string, tag: string): Promise<void> {
+  const statePath = path.join(resolveStateDir(), UPDATE_CHECK_FILENAME);
+  const state = await readState(statePath);
+  state.pendingRetryVersion = version;
+  state.pendingRetryTag = tag;
+  await writeState(statePath, state);
 }
 
 function sameUpdateAvailable(a: UpdateAvailable | null, b: UpdateAvailable | null): boolean {
@@ -345,6 +357,31 @@ export async function runGatewayUpdateCheck(params: {
 
   const statePath = path.join(resolveStateDir(), UPDATE_CHECK_FILENAME);
   const state = await readState(statePath);
+
+  // Handle pending retry from a previous EBUSY failure on Windows.
+  // After restart, file locks are released and npm install should succeed.
+  if (state.pendingRetryVersion) {
+    const retryVersion = state.pendingRetryVersion;
+    const retryTag = state.pendingRetryTag ?? "latest";
+    delete state.pendingRetryVersion;
+    delete state.pendingRetryTag;
+    await writeState(statePath, state);
+    params.log.info(`pending update retry: running npm install for v${retryVersion} (${retryTag})`);
+    const runAuto = params.runAutoUpdate ?? runAutoUpdateCommand;
+    const root = await resolveOpenClawPackageRoot({
+      moduleUrl: import.meta.url,
+      argv1: process.argv[1],
+      cwd: process.cwd(),
+    });
+    const outcome = await runAuto({ channel: retryTag as "stable" | "beta", timeoutMs: AUTO_UPDATE_COMMAND_TIMEOUT_MS, root: root ?? undefined });
+    if (outcome.ok) {
+      params.log.info(`pending update retry succeeded for v${retryVersion}`);
+    } else {
+      params.log.info(`pending update retry failed for v${retryVersion}: ${outcome.reason ?? `exit:${outcome.code}`}`);
+    }
+    return;
+  }
+
   const now = Date.now();
   const lastCheckedAt = state.lastCheckedAt ? Date.parse(state.lastCheckedAt) : null;
   if (shouldRunUpdateHints) {

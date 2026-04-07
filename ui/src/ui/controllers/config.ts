@@ -195,9 +195,13 @@ export async function runUpdate(state: ConfigState) {
     const res = await state.client.request("update.run", {
       sessionKey: state.applySessionKey,
     });
-    const result = (res as { result?: { status?: string; reason?: string } })?.result;
+    const body = res as { result?: { status?: string; reason?: string }; restart?: unknown };
+    const result = body?.result;
     if (result?.status === "ok") {
       state.updateMessage = t("update.successRestarting");
+    } else if (body?.restart) {
+      // EBUSY on Windows — restarting to release file locks, will auto-retry
+      state.updateMessage = t("update.ebusyRestarting");
     } else if (result?.reason === "dirty") {
       state.updateMessage = null;
       state.updateRunning = false;
@@ -209,8 +213,16 @@ export async function runUpdate(state: ConfigState) {
       });
       return;
     } else {
+      const reason = result?.reason ?? result?.status ?? "Update failed";
       state.updateMessage = null;
-      state.lastError = result?.reason ?? result?.status ?? "Update failed";
+      state.updateRunning = false;
+      await showConfirm({
+        title: t("update.available"),
+        message: t("update.failed", { reason }),
+        confirmText: t("update.close"),
+        hideCancel: true,
+      });
+      return;
     }
   } catch (err) {
     const msg = String(err);

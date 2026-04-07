@@ -570,7 +570,7 @@ export function renderApp(state: AppViewState) {
                                           <strong>${t("update.available")}</strong>
                                           ${availableUpdate.channel === "git"
                                                   ? html`${t("update.commitsBehind", { count: availableUpdate.latestVersion })}`
-                                                  : html`${t("update.versionInfo", { latest: availableUpdate.latestVersion, current: availableUpdate.currentVersion })}`}.
+                                                  : html`${t("update.versionInfo", { latest: availableUpdate.latestVersion, current: availableUpdate.currentVersion })}`}
                                           ${availableUpdate.downloadUrl
                                                   ? html`<a
                                                           class="btn btn--sm update-banner__btn"
