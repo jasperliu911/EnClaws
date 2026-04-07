@@ -31,33 +31,38 @@ export interface DeferredUpdateOptions {
 }
 
 function buildBatScript(opts: DeferredUpdateOptions): string {
+  // In bat scripts, external commands like npm/pnpm must use "call" prefix,
+  // otherwise the bat exits immediately after the command finishes.
   const installCmd =
     opts.manager === "pnpm"
-      ? `pnpm add -g ${opts.spec}`
+      ? `call pnpm add -g ${opts.spec}`
       : opts.manager === "bun"
-        ? `bun add -g ${opts.spec}`
-        : `npm i -g ${opts.spec} --no-fund --no-audit --loglevel=error`;
+        ? `call bun add -g ${opts.spec}`
+        : `call npm i -g ${opts.spec} --no-fund --no-audit --loglevel=error`;
 
   const restartCmd = opts.restartCommand.map((a) => (a.includes(" ") ? `"${a}"` : a)).join(" ");
 
+  const logFile = `%~dp0update-deferred.log`;
+
   return `@echo off
-echo [enclaws-update] Waiting for gateway process (PID ${opts.pid}) to exit...
+set LOGFILE=${logFile}
+echo [%date% %time%] [enclaws-update] Started, waiting for PID ${opts.pid} to exit... > "%LOGFILE%"
 :wait_pid
 tasklist /FI "PID eq ${opts.pid}" 2>nul | findstr /I "${opts.pid}" >nul
 if not errorlevel 1 (
   timeout /t 1 /nobreak >nul
   goto wait_pid
 )
-echo [enclaws-update] Gateway process exited. Running update...
-${installCmd}
+echo [%date% %time%] [enclaws-update] Gateway process exited. Running update... >> "%LOGFILE%"
+${installCmd} >> "%LOGFILE%" 2>&1
 if errorlevel 1 (
-  echo [enclaws-update] Update failed, retrying with --omit=optional...
-  ${installCmd} --omit=optional
+  echo [%date% %time%] [enclaws-update] First attempt failed, retrying with --omit=optional... >> "%LOGFILE%"
+  ${installCmd} --omit=optional >> "%LOGFILE%" 2>&1
 )
-echo [enclaws-update] Update complete. Restarting gateway...
+echo [%date% %time%] [enclaws-update] Update complete. Restarting gateway... >> "%LOGFILE%"
 cd /d "${opts.cwd}"
 start "" ${restartCmd}
-echo [enclaws-update] Done.
+echo [%date% %time%] [enclaws-update] Done. >> "%LOGFILE%"
 del "%~dp0update-deferred.vbs" 2>nul
 del "%~f0"
 `;
@@ -74,14 +79,15 @@ function buildShScript(opts: DeferredUpdateOptions): string {
   const restartCmd = opts.restartCommand.map((a) => (a.includes(" ") ? `"${a}"` : a)).join(" ");
 
   return `#!/bin/bash
-echo "[enclaws-update] Waiting for gateway process (PID ${opts.pid}) to exit..."
+LOGFILE="$(dirname "$0")/update-deferred.log"
+echo "[$(date)] [enclaws-update] Started, waiting for PID ${opts.pid} to exit..." > "$LOGFILE"
 while kill -0 ${opts.pid} 2>/dev/null; do sleep 1; done
-echo "[enclaws-update] Gateway process exited. Running update..."
-${installCmd} || ${installCmd} --omit=optional
-echo "[enclaws-update] Update complete. Restarting gateway..."
+echo "[$(date)] [enclaws-update] Gateway process exited. Running update..." >> "$LOGFILE"
+${installCmd} >> "$LOGFILE" 2>&1 || ${installCmd} --omit=optional >> "$LOGFILE" 2>&1
+echo "[$(date)] [enclaws-update] Update complete. Restarting gateway..." >> "$LOGFILE"
 cd "${opts.cwd}"
 nohup ${restartCmd} > /dev/null 2>&1 &
-echo "[enclaws-update] Done."
+echo "[$(date)] [enclaws-update] Done." >> "$LOGFILE"
 rm -f "$0"
 `;
 }
@@ -103,7 +109,7 @@ export async function spawnDeferredUpdate(opts: DeferredUpdateOptions): Promise<
   if (isWindows) {
     // Use a VBS wrapper to run the .bat hidden (cmd.exe ignores windowsHide)
     const vbsPath = path.join(stateDir, "update-deferred.vbs");
-    const vbsContent = `CreateObject("Wscript.Shell").Run """${scriptPath.replace(/\\/g, "\\\\")}""", 0, False`;
+    const vbsContent = `Set ws = CreateObject("Wscript.Shell")\nws.Run "cmd /c ""${scriptPath}""", 0, False`;
     await fs.writeFile(vbsPath, vbsContent, "utf-8");
     const child = spawn("wscript.exe", [vbsPath], {
       detached: true,
