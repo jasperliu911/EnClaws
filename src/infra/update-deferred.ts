@@ -46,6 +46,7 @@ function buildBatScript(opts: DeferredUpdateOptions): string {
 
   return `@echo off
 set LOGFILE=${logFile}
+set UPDATE_OK=0
 echo [%date% %time%] [enclaws-update] Started, waiting for PID ${opts.pid} to exit... > "%LOGFILE%"
 :wait_pid
 tasklist /FI "PID eq ${opts.pid}" 2>nul | findstr /I "${opts.pid}" >nul
@@ -58,12 +59,20 @@ ${installCmd} >> "%LOGFILE%" 2>&1
 if errorlevel 1 (
   echo [%date% %time%] [enclaws-update] First attempt failed, retrying with --omit=optional... >> "%LOGFILE%"
   ${installCmd} --omit=optional >> "%LOGFILE%" 2>&1
+  if errorlevel 1 (
+    echo [%date% %time%] [enclaws-update] Update failed. >> "%LOGFILE%"
+    goto cleanup
+  )
 )
-echo [%date% %time%] [enclaws-update] Update complete. Restarting gateway... >> "%LOGFILE%"
+set UPDATE_OK=1
+echo [%date% %time%] [enclaws-update] Update complete. >> "%LOGFILE%"${restartCmd ? `
 cd /d "${opts.cwd}"
-start "" ${restartCmd}
+echo [%date% %time%] [enclaws-update] Restarting gateway... >> "%LOGFILE%"
+start "" ${restartCmd}` : ""}
 echo [%date% %time%] [enclaws-update] Done. >> "%LOGFILE%"
+:cleanup
 del "%~dp0update-deferred.vbs" 2>nul
+if "%UPDATE_OK%"=="1" del "%LOGFILE%" 2>nul
 del "%~f0"
 `;
 }
@@ -80,14 +89,21 @@ function buildShScript(opts: DeferredUpdateOptions): string {
 
   return `#!/bin/bash
 LOGFILE="$(dirname "$0")/update-deferred.log"
+UPDATE_OK=0
 echo "[$(date)] [enclaws-update] Started, waiting for PID ${opts.pid} to exit..." > "$LOGFILE"
 while kill -0 ${opts.pid} 2>/dev/null; do sleep 1; done
 echo "[$(date)] [enclaws-update] Gateway process exited. Running update..." >> "$LOGFILE"
-${installCmd} >> "$LOGFILE" 2>&1 || ${installCmd} --omit=optional >> "$LOGFILE" 2>&1
-echo "[$(date)] [enclaws-update] Update complete. Restarting gateway..." >> "$LOGFILE"
-cd "${opts.cwd}"
-nohup ${restartCmd} > /dev/null 2>&1 &
-echo "[$(date)] [enclaws-update] Done." >> "$LOGFILE"
+if ${installCmd} >> "$LOGFILE" 2>&1 || ${installCmd} --omit=optional >> "$LOGFILE" 2>&1; then
+  UPDATE_OK=1
+  echo "[$(date)] [enclaws-update] Update complete." >> "$LOGFILE"${restartCmd ? `
+  cd "${opts.cwd}"
+  echo "[$(date)] [enclaws-update] Restarting gateway..." >> "$LOGFILE"
+  nohup ${restartCmd} > /dev/null 2>&1 &` : ""}
+  echo "[$(date)] [enclaws-update] Done." >> "$LOGFILE"
+else
+  echo "[$(date)] [enclaws-update] Update failed." >> "$LOGFILE"
+fi
+[ "$UPDATE_OK" = "1" ] && rm -f "$LOGFILE"
 rm -f "$0"
 `;
 }

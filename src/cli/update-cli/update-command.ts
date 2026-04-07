@@ -799,6 +799,32 @@ export async function updateCommand(opts: UpdateCommandOptions): Promise<void> {
     defaultRuntime.log("");
   }
 
+  // Windows npm mode: CLI process itself locks node_modules, so always use deferred script
+  if (process.platform === "win32" && updateInstallKind !== "git") {
+    if (!opts.json) {
+      defaultRuntime.log(theme.muted("Windows detected. Using deferred update to avoid file locks..."));
+    }
+    const { spawnDeferredUpdate } = await import("../../infra/update-deferred.js");
+    const { resolveGatewayPort: getPort } = await import("../../config/paths.js");
+    const { readPackageName } = await import("../../infra/package-json.js");
+    const packageName = (await readPackageName(root)) ?? "enclaws";
+    const spec = `${packageName}@${tag}`;
+    const port = getPort(undefined, process.env);
+    await spawnDeferredUpdate({
+      spec,
+      manager: "npm",
+      port,
+      pid: process.pid,
+      restartCommand: [],
+      cwd: process.cwd(),
+    });
+    if (!opts.json) {
+      defaultRuntime.log(theme.success("Update will run after this process exits. Check ~/.enclaws/update-deferred.log for progress."));
+    }
+    defaultRuntime.exit(0);
+    return;
+  }
+
   const { progress, stop } = createUpdateProgress(showProgress);
   const startedAt = Date.now();
 
