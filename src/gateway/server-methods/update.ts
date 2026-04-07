@@ -74,17 +74,19 @@ export const updateHandlers: GatewayRequestHandlers = {
           cwd: process.cwd(),
         });
 
-        // Respond immediately, then exit so the deferred script can run npm install
+        // Respond first, then exit after a short delay so the response is sent
         respond(true, {
           ok: true,
           result: { status: "ok", mode: "deferred", reason: "windows-deferred-update" },
-          restart: { signal: "deferred", delayMs: 0 },
+          restart: null,
         }, undefined);
 
-        // Schedule exit to release file locks
+        // Exit the process so file locks are released and the deferred script can run npm install.
+        // The deferred script will restart the gateway after npm install completes.
         setTimeout(() => {
+          context?.logGateway?.info("update.run (deferred): exiting process for npm install");
           process.exit(0);
-        }, 1000);
+        }, 2000);
         return;
       }
     }
