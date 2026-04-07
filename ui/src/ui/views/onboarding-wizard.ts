@@ -522,6 +522,8 @@ export class OnboardingWizard extends LitElement {
   // ── Step validation (local only, no API calls) ──
   private validateChannel() {
     if (!this.selectedChannel) { this.error = t("onboarding.selectChannel"); return false; }
+    this.channelAppId = this.channelAppId.trim();
+    this.channelAppSecret = this.channelAppSecret.trim();
     if (!this.channelAppId) { this.error = t("onboarding.appIdRequired"); return false; }
     if (!this.channelAppSecret) { this.error = t("onboarding.appSecretRequired"); return false; }
     return true;
@@ -534,6 +536,9 @@ export class OnboardingWizard extends LitElement {
       }
       return true;
     }
+    this.modelApiKey = this.modelApiKey.trim();
+    this.modelBaseUrl = this.modelBaseUrl.trim();
+    this.modelName = this.modelName.trim();
     if (!this.selectedProvider) { this.error = t("onboarding.selectModel"); return false; }
     if (!this.modelApiKey) { this.error = t("onboarding.apiKeyRequired"); return false; }
     if (!this.modelBaseUrl) { this.error = t("onboarding.baseUrlRequired"); return false; }
@@ -542,6 +547,7 @@ export class OnboardingWizard extends LitElement {
   }
 
   private validateAgent() {
+    this.agentName = this.agentName.trim();
     if (!this.agentName) { this.error = t("onboarding.agentNameRequired"); return false; }
     const hasModel = this.modelMode === "shared" ? !!this.selectedSharedModelId : !!this.selectedProvider;
     if (!hasModel) { this.error = t("onboarding.modelRequiredForAgent"); return false; }
