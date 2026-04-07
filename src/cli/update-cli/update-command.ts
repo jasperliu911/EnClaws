@@ -805,11 +805,10 @@ export async function updateCommand(opts: UpdateCommandOptions): Promise<void> {
       defaultRuntime.log(theme.muted("Windows detected. Using deferred update to avoid file locks..."));
     }
     const { spawnDeferredUpdate } = await import("../../infra/update-deferred.js");
-    const { resolveGatewayPort: getPort } = await import("../../config/paths.js");
     const { readPackageName } = await import("../../infra/package-json.js");
     const packageName = (await readPackageName(root)) ?? "enclaws";
     const spec = `${packageName}@${tag}`;
-    const port = getPort(undefined, process.env);
+    const port = resolveGatewayPort(undefined, process.env);
     await spawnDeferredUpdate({
       spec,
       manager: "npm",
