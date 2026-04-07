@@ -39,7 +39,7 @@
     },
     {
       "name": "群聊-查询记录筛选",
-      "message": "帮我查一下bug追踪表里状态是「未解决」的记录有哪些",
+      "message": "帮我查一下bug追踪表里状态是「待处理」的记录有哪些",
       "assert": {
         "notContains": "error",
         "minLength": 2

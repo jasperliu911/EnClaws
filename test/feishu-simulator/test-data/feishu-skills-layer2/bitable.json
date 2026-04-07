@@ -35,7 +35,7 @@
     },
     {
       "name": "查询记录-按条件筛选",
-      "message": "帮我查一下bug追踪表里状态是「未解决」的记录有哪些",
+      "message": "帮我查一下bug追踪表里状态是「待处理」的记录有哪些",
       "assert": {
         "notContains": "error",
         "minLength": 2
@@ -46,7 +46,7 @@
     },
     {
       "name": "修改记录",
-      "message": "帮我把bug追踪表里第一条记录的状态改成「已解决」",
+      "message": "帮我把bug追踪表里第一条记录的状态改成「已完成」",
       "assert": {
         "notContains": "exception",
         "minLength": 2
