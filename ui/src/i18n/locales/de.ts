@@ -95,6 +95,8 @@ export const de: TranslationMap = {
     successRestart: "Update erfolgreich. Bitte starten Sie den Dienst manuell neu, um die Änderungen anzuwenden.",
     successRestarting: "Update erfolgreich. Der Dienst wird neu gestartet — bitte aktualisieren Sie die Seite in wenigen Sekunden.",
     commitsBehind: "{count} Commit(s) hinter Upstream",
+    dirtyWorkspace: "Update übersprungen: Arbeitsbereich hat nicht commitete Änderungen. Bitte zuerst committen oder stashen.",
+    close: "Schließen",
   },
   platformModels: {
     title: "Plattform-gemeinsame Modelle",

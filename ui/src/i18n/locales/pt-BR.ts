@@ -95,6 +95,8 @@ export const pt_BR: TranslationMap = {
     successRestart: "Atualização concluída. Reinicie o serviço manualmente para aplicar as alterações.",
     successRestarting: "Atualização concluída. O serviço está reiniciando — atualize a página em alguns segundos.",
     commitsBehind: "{count} commit(s) atrás do upstream",
+    dirtyWorkspace: "Atualização ignorada: há alterações não commitadas. Faça commit ou stash primeiro.",
+    close: "Fechar",
   },
   platformModels: {
     title: "Modelos Compartilhados da Plataforma",

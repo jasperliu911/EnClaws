@@ -94,12 +94,13 @@ export const updateHandlers: GatewayRequestHandlers = {
     // Only restart the gateway when the update actually succeeded.
     // Restarting after a failed update leaves the process in a broken state
     // (corrupted node_modules, partial builds) and causes a crash loop.
-    // Skip auto-restart for git installs — there is no process supervisor to
-    // re-launch the service, so the user must restart manually.
+    // For git mode, add extra delay to ensure build output is fully flushed.
+    // The run-loop handles SIGUSR1 as an in-process restart (no supervisor needed).
+    const effectiveDelayMs = result.mode === "git" ? Math.max(restartDelayMs, 3000) : restartDelayMs;
     const restart =
-      result.status === "ok" && result.mode !== "git"
+      result.status === "ok"
         ? scheduleGatewaySigusr1Restart({
-            delayMs: restartDelayMs,
+            delayMs: effectiveDelayMs,
             reason: "update.run",
             audit: {
               actor: actor.actor,

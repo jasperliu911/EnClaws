@@ -1,4 +1,5 @@
 import { t } from "../../i18n/index.ts";
+import { showConfirm } from "../components/confirm-dialog.ts";
 import type { GatewayBrowserClient } from "../gateway.ts";
 import type { ConfigSchemaResponse, ConfigSnapshot, ConfigUiHints } from "../types.ts";
 import type { JsonSchema } from "../views/config-form.shared.ts";
@@ -184,19 +185,49 @@ export async function runUpdate(state: ConfigState) {
     return;
   }
   state.updateRunning = true;
+  state.updateMessage = t("update.updating");
   state.lastError = null;
+
+  // Yield to let Lit render the "updating" state before starting the long request
+  await new Promise((r) => setTimeout(r, 0));
+
   try {
     const res = await state.client.request("update.run", {
       sessionKey: state.applySessionKey,
     });
-    const result = (res as { result?: { status?: string; mode?: string } })?.result;
+    const result = (res as { result?: { status?: string; reason?: string } })?.result;
     if (result?.status === "ok") {
-      state.updateMessage = result.mode === "git"
-        ? t("update.successRestart")
-        : t("update.successRestarting");
+      state.updateMessage = t("update.successRestarting");
+    } else if (result?.reason === "dirty") {
+      state.updateMessage = null;
+      state.updateRunning = false;
+      await showConfirm({
+        title: t("update.available"),
+        message: t("update.dirtyWorkspace"),
+        confirmText: t("update.close"),
+        hideCancel: true,
+      });
+      return;
+    } else {
+      state.updateMessage = null;
+      state.lastError = result?.reason ?? result?.status ?? "Update failed";
     }
   } catch (err) {
-    state.lastError = String(err);
+    const msg = String(err);
+    if (msg.includes("rate limit")) {
+      // Rate limited — show dirty workspace hint since repeated clicks usually mean the first one failed
+      state.updateMessage = null;
+      state.updateRunning = false;
+      await showConfirm({
+        title: t("update.available"),
+        message: t("update.dirtyWorkspace"),
+        confirmText: t("update.close"),
+        hideCancel: true,
+      });
+      return;
+    }
+    // Connection drops during gateway restart — that's expected
+    state.updateMessage = t("update.successRestarting");
   } finally {
     state.updateRunning = false;
   }

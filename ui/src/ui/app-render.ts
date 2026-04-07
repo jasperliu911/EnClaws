@@ -559,10 +559,10 @@ export function renderApp(state: AppViewState) {
 
               <main class="content ${isChat ? "content--chat" : ""}">
                   ${
-                          state.updateMessage
+                          state.updateMessage || state.updateRunning
                                   ? html`
                                       <div class="update-banner callout success" role="alert">
-                                          <strong>${state.updateMessage}</strong>
+                                          <strong>${state.updateMessage || t("update.updating")}</strong>
                                       </div>`
                                   : availableUpdate
                                   ? html`

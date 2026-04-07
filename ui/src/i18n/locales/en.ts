@@ -100,6 +100,8 @@ export const en: TranslationMap = {
     successRestart: "Update successful. Please restart the service manually to apply changes.",
     successRestarting: "Update successful. Service is restarting — please refresh the page in a few seconds.",
     commitsBehind: "{count} commit(s) behind upstream",
+    dirtyWorkspace: "Update skipped: workspace has uncommitted changes. Please commit or stash first.",
+    close: "Close",
   },
   platformModels: {
     title: "Platform Shared Models",

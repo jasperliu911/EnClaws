@@ -100,6 +100,8 @@ export const zh_CN: TranslationMap = {
     successRestart: "更新成功，请手动重启服务以应用更新。",
     successRestarting: "更新成功，服务正在重启，请稍后刷新页面。",
     commitsBehind: "落后远程 {count} 个提交",
+    dirtyWorkspace: "更新跳过：工作区有未提交的改动，请先提交或暂存后重试。",
+    close: "关闭",
   },
   platformModels: {
     title: "平台共享模型",
