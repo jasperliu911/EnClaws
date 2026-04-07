@@ -58,6 +58,7 @@ echo [enclaws-update] Update complete. Restarting gateway...
 cd /d "${opts.cwd}"
 start "" ${restartCmd}
 echo [enclaws-update] Done.
+del "%~dp0update-deferred.vbs" 2>nul
 del "%~f0"
 `;
 }
@@ -99,16 +100,25 @@ export async function spawnDeferredUpdate(opts: DeferredUpdateOptions): Promise<
     await fs.chmod(scriptPath, 0o755);
   }
 
-  const spawnCmd = isWindows ? "cmd.exe" : "/bin/bash";
-  const spawnArgs = isWindows ? ["/c", scriptPath] : [scriptPath];
-
-  const child = spawn(spawnCmd, spawnArgs, {
-    cwd: opts.cwd,
-    detached: true,
-    stdio: "ignore",
-    windowsHide: true,
-  });
-  child.unref();
+  if (isWindows) {
+    // Use a VBS wrapper to run the .bat hidden (cmd.exe ignores windowsHide)
+    const vbsPath = path.join(stateDir, "update-deferred.vbs");
+    const vbsContent = `CreateObject("Wscript.Shell").Run """${scriptPath.replace(/\\/g, "\\\\")}""", 0, False`;
+    await fs.writeFile(vbsPath, vbsContent, "utf-8");
+    const child = spawn("wscript.exe", [vbsPath], {
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    child.unref();
+  } else {
+    const child = spawn("/bin/bash", [scriptPath], {
+      cwd: opts.cwd,
+      detached: true,
+      stdio: "ignore",
+    });
+    child.unref();
+  }
 
   return { scriptPath };
 }
