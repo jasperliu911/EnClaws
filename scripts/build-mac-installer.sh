@@ -50,7 +50,11 @@ if [[ "$SKIP_BUILD" != "1" ]]; then
   (cd "$ROOT_DIR" && pnpm build)
 
   echo "[*] Building UI..."
-  (cd "$ROOT_DIR" && node scripts/ui.js build) || echo "[!] UI build failed; continuing (Web UI may be incomplete)"
+  (cd "$ROOT_DIR" && node scripts/ui.js build)
+  if [ ! -f "$ROOT_DIR/dist/control-ui/index.html" ]; then
+    echo "ERROR: Control UI build failed — dist/control-ui/index.html not found" >&2
+    exit 1
+  fi
 
   echo "[OK] Build complete"
 else
