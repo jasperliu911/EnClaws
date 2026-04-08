@@ -467,7 +467,6 @@ export class PlatformModelsView extends LitElement {
               <label>${t("models.authMode")}</label>
               <select @change=${(e: Event) => (this.formAuthMode = (e.target as HTMLSelectElement).value)}>
                 <option value="api-key" ?selected=${this.formAuthMode === "api-key"}>API Key</option>
-                <option value="oauth" ?selected=${this.formAuthMode === "oauth"}>OAuth</option>
                 <option value="token" ?selected=${this.formAuthMode === "token"}>Token</option>
                 <option value="none" ?selected=${this.formAuthMode === "none"}>${t("models.authNone")}</option>
               </select>
