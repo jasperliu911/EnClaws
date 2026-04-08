@@ -444,8 +444,8 @@ if [[ "${SKIP_DMG:-0}" != "1" ]]; then
   ditto "$APP_ROOT" "$DMG_TEMP/EnClaws.app"
   ln -s /Applications "$DMG_TEMP/Applications"
 
-  # Create compressed read-only DMG directly (avoids UDRW "Resource busy" on CI)
-  hdiutil create -volname "EnClaws" -srcfolder "$DMG_TEMP" -ov -format UDZO "$DMG_PATH"
+  # Create lzma-compressed read-only DMG directly (ULMO = smaller than UDZO/zlib)
+  hdiutil create -volname "EnClaws" -srcfolder "$DMG_TEMP" -ov -format ULMO "$DMG_PATH"
 
   rm -rf "$DMG_TEMP"
 
