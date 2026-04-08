@@ -138,22 +138,13 @@ DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"
 NODE="$DIR/node/bin/node"
 ENTRY="$DIR/enclaws.mjs"
 PORT="${ENCLAWS_GATEWAY_PORT:-18888}"
-PID_FILE="$HOME/.enclaws/gateway.pid"
-
+PLIST_LABEL="ai.enclaws.gateway"
+PLIST_PATH="$HOME/Library/LaunchAgents/${PLIST_LABEL}.plist"
 LOADING="$DIR/loading.html"
+LOG_FILE="$HOME/.enclaws/gateway.log"
 
-# If gateway is already running, just open dashboard and exit
-if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-  open "http://localhost:$PORT"
-  exit 0
-fi
-if curl -s -o /dev/null "http://localhost:$PORT" 2>/dev/null; then
-  open "http://localhost:$PORT"
-  exit 0
-fi
-
-# Show loading page immediately (gateway not ready yet)
-open "file://${LOADING}?port=${PORT}"
+mkdir -p "$HOME/.enclaws"
+mkdir -p "$HOME/Library/LaunchAgents"
 
 # Create symlink to /usr/local/bin so "enclaws" works in terminal
 CLI="$DIR/enclaws"
@@ -161,7 +152,6 @@ if [ ! -L /usr/local/bin/enclaws ] || [ "$(readlink /usr/local/bin/enclaws)" != 
   if ln -sf "$CLI" /usr/local/bin/enclaws 2>/dev/null; then
     true
   else
-    # No permission — ask user to authorize via macOS password dialog
     ESCAPED_CLI=$(printf '%s' "$CLI" | sed "s/'/'\\\\''/g")
     osascript -e "do shell script \"mkdir -p /usr/local/bin && ln -sf '${ESCAPED_CLI}' /usr/local/bin/enclaws\" with administrator privileges" 2>/dev/null || true
   fi
@@ -172,12 +162,71 @@ if [ ! -f "$HOME/.enclaws/.env" ]; then
   "$NODE" "$DIR/scripts/postinstall.js" 2>/dev/null || true
 fi
 
-# Start gateway as detached background process
-# Launcher exits immediately so clicking the icon again works
-mkdir -p "$HOME/.enclaws"
-nohup "$NODE" "$ENTRY" gateway --port "$PORT" --no-open </dev/null >"$HOME/.enclaws/gateway.log" 2>&1 &
-GATEWAY_PID=$!
-echo "$GATEWAY_PID" > "$PID_FILE"
+# Write launchd plist — launchd will manage the gateway process:
+#   - RunAtLoad:    start on login
+#   - KeepAlive:    restart if it crashes
+#   - WatchPaths:   restart when .app is replaced (package.json changes)
+cat > "$PLIST_PATH" << PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>${PLIST_LABEL}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>${NODE}</string>
+        <string>${ENTRY}</string>
+        <string>gateway</string>
+        <string>--port</string>
+        <string>${PORT}</string>
+        <string>--no-open</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>${HOME}</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>${LOG_FILE}</string>
+    <key>StandardErrorPath</key>
+    <string>${LOG_FILE}</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>PathState</key>
+        <dict>
+            <key>${ENTRY}</key>
+            <true/>
+        </dict>
+    </dict>
+    <key>WatchPaths</key>
+    <array>
+        <string>${DIR}/package.json</string>
+    </array>
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+</dict>
+</plist>
+PLIST
+
+# Reload the service: unload old, load new
+# This also handles upgrade: old gateway gets killed, new one starts
+launchctl unload "$PLIST_PATH" 2>/dev/null
+launchctl load "$PLIST_PATH"
+
+# If gateway is already up, just open dashboard
+if curl -s -o /dev/null "http://localhost:$PORT" 2>/dev/null; then
+  open "http://localhost:$PORT"
+  exit 0
+fi
+
+# Otherwise show loading page (gateway is starting via launchd)
+open "file://${LOADING}?port=${PORT}"
 LAUNCHER
 
 chmod +x "$APP_MACOS/enclaws-launcher"
