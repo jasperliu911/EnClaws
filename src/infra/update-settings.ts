@@ -64,15 +64,12 @@ async function detectInstallKind(): Promise<InstallKind> {
   const isGit = (await fileExists(path.join(root, ".git")));
   if (isGit) return "git";
 
-  // Check bundled installer (Windows .exe / macOS .dmg)
-  const isInstaller =
-    (process.platform === "win32" &&
-      (await fileExists(path.join(root, "..", "node", "node.exe")))) ||
-    (process.platform === "darwin" &&
-      (await fileExists(path.join(root, "node", "bin", "node"))));
-  if (isInstaller) return "installer";
+  // Check npm/pnpm global install — package root lives inside node_modules
+  const normalized = root.replace(/\\/g, "/");
+  if (normalized.includes("/node_modules/")) return "package";
 
-  return "package";
+  // Not git, not npm package → must be bundled installer (Windows .exe / macOS .dmg)
+  return "installer";
 }
 
 /** Ensure update-settings.json exists with defaults. Called on gateway startup. */
