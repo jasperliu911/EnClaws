@@ -371,7 +371,7 @@ export class OnboardingWizard extends LitElement {
   @state() private channelAppSecret = "";
 
   // Model step
-  @state() private modelMode: "shared" | "custom" = "custom";
+  @state() private modelMode: "shared" | "custom" = "shared";
   @state() private sharedModels: Array<{ id: string; providerName: string; models: Array<{ id: string; name: string }> }> = [];
   @state() private selectedSharedModelId = ""; // tenant_models.id
   @state() private selectedSharedSubModelId = ""; // model definition id within shared provider
@@ -405,6 +405,9 @@ export class OnboardingWizard extends LitElement {
         models: Array<{ id: string; providerName: string; visibility?: string; isActive: boolean; models: Array<{ id: string; name: string }> }>;
       };
       this.sharedModels = (result.models ?? []).filter((m) => m.visibility === "shared" && m.isActive);
+      if (this.sharedModels.length === 0) {
+        this.modelMode = "custom";
+      }
     } catch {
       this.sharedModels = [];
       this.modelMode = "custom";
@@ -778,15 +781,15 @@ export class OnboardingWizard extends LitElement {
 
       ${hasShared ? html`
         <div style="display:flex;gap:1.25rem;margin-bottom:1.25rem;justify-content:center">
-          <button class="btn ${this.modelMode === 'custom' ? 'btn-primary' : ''}"
-            style="${this.modelMode !== 'custom' ? 'background:transparent;border:1px solid var(--border,#404040);color:var(--text,#e5e5e5)' : ''}"
-            @click=${() => { this.modelMode = "custom"; this.error = ""; }}>
-            ${t("onboarding.useCustomModel")}
-          </button>
           <button class="btn ${this.modelMode === 'shared' ? 'btn-primary' : ''}"
             style="${this.modelMode !== 'shared' ? 'background:transparent;border:1px solid var(--border,#404040);color:var(--text,#e5e5e5)' : ''}"
             @click=${() => { this.modelMode = "shared"; this.error = ""; }}>
             ${t("onboarding.useSharedModel")}
+          </button>
+          <button class="btn ${this.modelMode === 'custom' ? 'btn-primary' : ''}"
+            style="${this.modelMode !== 'custom' ? 'background:transparent;border:1px solid var(--border,#404040);color:var(--text,#e5e5e5)' : ''}"
+            @click=${() => { this.modelMode = "custom"; this.error = ""; }}>
+            ${t("onboarding.useCustomModel")}
           </button>
         </div>
       ` : nothing}

@@ -453,23 +453,7 @@ export function renderApp(state: AppViewState) {
                       </div>
                   `;
               })}
-              <div class="nav-group nav-group--links">
-                  <div class="nav-label nav-label--static">
-                      <span class="nav-label__text">${t("common.resources")}</span>
-                  </div>
-                  <div class="nav-group__items">
-                      <a
-                              class="nav-item nav-item--external"
-                              href="https://docs.enclaws.ai"
-                              target=${EXTERNAL_LINK_TARGET}
-                              rel=${buildExternalLinkRel()}
-                              title="${t("common.docs")} (opens in new tab)"
-                      >
-                          <span class="nav-item__icon" aria-hidden="true">${icons.book}</span>
-                          <span class="nav-item__text">${t("common.docs")}</span>
-                      </a>
-                  </div>
-              </div>
+              <!-- resources / docs link hidden -->
               ${(() => {
                   const authState = loadAuth();
                   if (!authState?.user) return nothing;
