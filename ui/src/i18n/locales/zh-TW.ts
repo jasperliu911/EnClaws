@@ -97,7 +97,7 @@ export const zh_TW: TranslationMap = {
     available: "有新版本可用：",
     availableGit: "有新版本可用：",
     versionInfo: "v{latest}（目前 v{current}）",
-    downloadInstall: "下載並安裝",
+    downloadInstall: "請前往下載安裝",
     updateNow: "立即更新",
     updating: "更新中…",
     successRestart: "更新成功，請手動重新啟動服務以套用更新。",

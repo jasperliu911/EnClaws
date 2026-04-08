@@ -97,7 +97,7 @@ export const de: TranslationMap = {
     available: "Update verfügbar:",
     availableGit: "Update verfügbar:",
     versionInfo: "v{latest} (aktuell v{current})",
-    downloadInstall: "Herunterladen & installieren",
+    downloadInstall: "Zum Download",
     updateNow: "Jetzt aktualisieren",
     updating: "Aktualisierung…",
     successRestart: "Update erfolgreich. Bitte starten Sie den Dienst manuell neu, um die Änderungen anzuwenden.",

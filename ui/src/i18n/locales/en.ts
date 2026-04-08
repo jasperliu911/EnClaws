@@ -102,7 +102,7 @@ export const en: TranslationMap = {
     available: "Update available:",
     availableGit: "Update available:",
     versionInfo: "v{latest} (running v{current})",
-    downloadInstall: "Download & Install",
+    downloadInstall: "Go to download",
     updateNow: "Update now",
     updating: "Updating…",
     successRestart: "Update successful. Please restart the service manually to apply changes.",

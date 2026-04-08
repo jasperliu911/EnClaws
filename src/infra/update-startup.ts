@@ -76,8 +76,7 @@ function resolveInstallerDownloadUrl(version: string): string {
   if (template) {
     return template.replace(/\{version\}/g, version);
   }
-  // Default: redirect to official website
-  return "https://www.baidu.com";
+  return "https://www.enclaws.ai/";
 }
 
 function shouldSkipCheck(allowInTests: boolean): boolean {
@@ -196,7 +195,7 @@ function resolvePersistedUpdateAvailable(state: UpdateCheckState): UpdateAvailab
   if (cmp == null || cmp >= 0) {
     return null;
   }
-  const channel = state.lastAvailableTag?.trim() || DEFAULT_PACKAGE_CHANNEL;
+  const channel = state.lastAvailableTag?.trim() || DEFAULT_PACKAGE_TRACK;
   return {
     currentVersion: VERSION,
     latestVersion,

@@ -102,7 +102,7 @@ export const zh_CN: TranslationMap = {
     available: "有新版本可用：",
     availableGit: "有新版本可用：",
     versionInfo: "v{latest}（当前 v{current}）",
-    downloadInstall: "下载并安装",
+    downloadInstall: "请前往下载安装",
     updateNow: "立即更新",
     updating: "更新中…",
     successRestart: "更新成功，请手动重启服务以应用更新。",
