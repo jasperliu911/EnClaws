@@ -66,6 +66,28 @@ export async function runTestFiles(opts: RunnerOptions & { llmJudge?: LlmJudgeCo
 export type { LlmJudgeConfig };
 
 /**
+ * Layer 3 wrapper — delegates to runTestFiles with LLM judge enabled.
+ * Accepts flat llm* options (layer3 test entry style) and converts to llmJudge config.
+ */
+export async function runLayer3TestFiles(opts: RunnerOptions & {
+  llmApiKey: string;
+  llmProvider?: string;
+  llmModel?: string;
+  llmBaseUrl?: string;
+}): Promise<{ results: ResultRow[]; errors: string[] }> {
+  const { llmApiKey, llmProvider, llmModel, llmBaseUrl, ...runnerOpts } = opts;
+  return runTestFiles({
+    ...runnerOpts,
+    llmJudge: {
+      provider: (llmProvider as "anthropic" | "openai") ?? "anthropic",
+      model: llmModel ?? "claude-haiku-4-5-20251001",
+      apiKey: llmApiKey,
+      baseUrl: llmBaseUrl,
+    },
+  });
+}
+
+/**
  * Resolve a credential field, preferring env var over the JSON value.
  * Detects common placeholder values (cli_xxx, xxx, ou_xxx, empty) as "missing".
  */
