@@ -73,7 +73,7 @@ export function getTokenRank(period: "all" | "month" | "today", limit: number) {
      LEFT JOIN users us ON us.tenant_id = u.tenant_id AND (u.user_id = us.id OR u.user_id = us.union_id)
      JOIN tenants t ON u.tenant_id = t.id
      WHERE ${cond} AND t.slug != '_platform' AND u.user_id IS NOT NULL
-     GROUP BY u.user_id ORDER BY tokens DESC LIMIT ?`,
+     GROUP BY u.tenant_id, u.user_id ORDER BY tokens DESC LIMIT ?`,
     [limit],
   ).rows.map((r: any) => ({ name: (r.name as string) || "-", tenantName: (r.tenant_name as string) || "-", tokens: Number(r.tokens) }));
 
@@ -98,7 +98,7 @@ export function getTokenRank(period: "all" | "month" | "today", limit: number) {
      FROM usage_records u
      JOIN tenants t ON u.tenant_id = t.id
      WHERE ${cond} AND u.agent_id IS NOT NULL AND t.slug != '_platform'
-     GROUP BY u.agent_id ORDER BY tokens DESC LIMIT ?`,
+     GROUP BY u.tenant_id, u.agent_id ORDER BY tokens DESC LIMIT ?`,
     [limit],
   ).rows.map((r: any) => ({ name: r.name as string, tenantName: r.tenant_name as string, tokens: Number(r.tokens) }));
 
