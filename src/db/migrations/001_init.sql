@@ -179,6 +179,8 @@ CREATE TABLE tenant_agents (
   name           VARCHAR(255) NOT NULL,
   config         JSONB        NOT NULL DEFAULT '{}', -- full agent config
   model_config   JSONB        NOT NULL DEFAULT '[]', -- [{providerId, modelId, isDefault}] ordered list; isDefault=true is primary, rest are fallbacks
+  tools          JSONB        NOT NULL DEFAULT '{"deny":[]}', -- tool deny/allow overrides
+  skills         JSONB        NOT NULL DEFAULT '[]', -- enabled skill list
   is_active      BOOLEAN      NOT NULL DEFAULT true,
   created_by     UUID         REFERENCES users(id) ON DELETE SET NULL,
   created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
