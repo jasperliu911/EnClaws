@@ -64,47 +64,73 @@ function getPendingMigrations(applied: Set<string>): string[] {
 async function runMigrations(): Promise<void> {
   initDb();
 
-  // Migrations here are incremental changes applied after the initial schema.
-  // Skip 001_init.sql for SQLite since it's PG-specific (schema.sql is the SQLite equivalent).
+  // ================================================================
+  // Migration strategy:
+  //
+  // 001_init.sql is the consolidated PG schema (includes everything
+  // that was previously spread across 002-008).  Fresh PG installs
+  // only need 001.
+  //
+  // SQLite uses schema-sql.ts (CREATE TABLE) for new databases and
+  // the inline PRAGMA+ALTER block below for existing databases.
+  //
+  // The legacy migration filenames (002-008) are recorded in the
+  // _migrations table even though the .sql files no longer exist,
+  // so that older deployments that already applied them won't see
+  // "file not found" errors, and newer deployments that ran the
+  // consolidated 001 won't try to re-apply them.
+  // ================================================================
 
   await ensureMigrationsTable();
   const applied = await getAppliedMigrations();
   let pending = getPendingMigrations(applied);
 
+  // Mark legacy migrations (002-008) as applied — their changes are
+  // now part of 001_init.sql.  This is safe for all scenarios:
+  //   • Fresh install: 001 has everything, legacy names recorded
+  //   • Existing install: already in _migrations, INSERT IGNORE/ON CONFLICT
+  const legacyMigrations = [
+    "002_user_channel_id.sql",
+    "003_exec_defaults.sql",
+    "004_usage_user_id_text.sql",
+    "005_traces_channel.sql",
+    "006_auth_phase1.sql",
+    "006_user_open_ids_array.sql",
+    "007_auth_phase2.sql",
+    "008_auth_phase3.sql",
+  ];
+  for (const name of legacyMigrations) {
+    if (!applied.has(name)) {
+      if (getDbType() === DB_SQLITE) {
+        sqliteQuery("INSERT OR IGNORE INTO _migrations (name) VALUES (?)", [name]);
+      } else {
+        await query("INSERT INTO _migrations (name) VALUES ($1) ON CONFLICT DO NOTHING", [name]);
+      }
+      pending = pending.filter((f) => f !== name);
+    }
+  }
+
   if (getDbType() === DB_SQLITE) {
-    // Filter out PG-specific migrations
-    if (!applied.has("001_init.sql") && pending.includes("001_init.sql")) {
+    // 001_init.sql is PG-only; SQLite uses schema-sql.ts for fresh DBs.
+    if (!applied.has("001_init.sql")) {
       sqliteQuery("INSERT OR IGNORE INTO _migrations (name) VALUES (?)", ["001_init.sql"]);
       pending = pending.filter((f) => f !== "001_init.sql");
     }
 
-    // Filter out PG-specific migrations (those with PG syntax that won't run on SQLite)
-    // 006_user_open_ids_array.sql uses PG array types — skip, already in schema.sql
-    // 002_user_channel_id.sql uses PG ALTER TABLE syntax — handled inline below
-    const pgOnlyMigrations = new Set([
-      "006_user_open_ids_array.sql",
-      "002_user_channel_id.sql",
-      "003_exec_defaults.sql",
-      "004_usage_user_id_text.sql",
-      "005_traces_channel.sql",
-    ]);
-    for (const migration of pgOnlyMigrations) {
-      if (!applied.has(migration) && pending.includes(migration)) {
-        sqliteQuery("INSERT OR IGNORE INTO _migrations (name) VALUES (?)", [migration]);
-        pending = pending.filter((f) => f !== migration);
-      }
-    }
-
-    // Inline SQLite migration: add channel_id to users if missing (for existing DBs)
+    // ---- Inline SQLite patches for EXISTING databases ----
+    // New databases already have all columns/tables via schema-sql.ts.
+    // These patches only fire when a column is missing (idempotent).
     const db = getSqliteDb();
-    const cols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
-    if (!cols.some((c) => c.name === "channel_id")) {
+
+    // users: channel_id (from legacy 002)
+    const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+    if (!userCols.some((c) => c.name === "channel_id")) {
       db.exec("ALTER TABLE users ADD COLUMN channel_id TEXT REFERENCES tenant_channels(id) ON DELETE SET NULL");
       db.exec("CREATE INDEX IF NOT EXISTS idx_users_channel ON users (channel_id)");
       console.log("[migrate]   ✓ SQLite: added channel_id column to users");
     }
 
-    // Inline SQLite migration: add agent_id to tenant_channel_apps if missing
+    // tenant_channel_apps: agent_id
     const appCols = db.prepare("PRAGMA table_info(tenant_channel_apps)").all() as { name: string }[];
     if (!appCols.some((c) => c.name === "agent_id")) {
       db.exec("ALTER TABLE tenant_channel_apps ADD COLUMN agent_id TEXT");
@@ -112,69 +138,34 @@ async function runMigrations(): Promise<void> {
       console.log("[migrate]   ✓ SQLite: added agent_id column to tenant_channel_apps");
     }
 
-    // Inline SQLite migration (auth phase 1): force_change_password + password_changed_at
-    const userCols2 = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
-    if (!userCols2.some((c) => c.name === "force_change_password")) {
+    // users: auth phase 1 columns
+    if (!userCols.some((c) => c.name === "force_change_password")) {
       db.exec("ALTER TABLE users ADD COLUMN force_change_password INTEGER NOT NULL DEFAULT 0");
       console.log("[migrate]   ✓ SQLite: added force_change_password column to users");
     }
-    if (!userCols2.some((c) => c.name === "password_changed_at")) {
+    if (!userCols.some((c) => c.name === "password_changed_at")) {
       db.exec("ALTER TABLE users ADD COLUMN password_changed_at TEXT");
-      // Backfill for existing console-login users
       db.exec(
         "UPDATE users SET password_changed_at = datetime('now') WHERE password_changed_at IS NULL AND role IN ('platform-admin','owner')",
       );
       console.log("[migrate]   ✓ SQLite: added password_changed_at column to users");
     }
 
-    // Inline SQLite migration (auth phase 1): password_reset_tokens table
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS password_reset_tokens (
-        id          TEXT PRIMARY KEY,
-        user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        token_hash  TEXT NOT NULL UNIQUE,
-        purpose     TEXT NOT NULL DEFAULT 'reset',
-        payload     TEXT,
-        expires_at  TEXT NOT NULL,
-        used_at     TEXT,
-        created_at  TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-      CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens (user_id);
-      CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires ON password_reset_tokens (expires_at);
-    `);
-
-    // Inline SQLite migration (auth phase 2): password_history + login_attempts
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS password_history (
-        id            TEXT PRIMARY KEY,
-        user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        password_hash TEXT NOT NULL,
-        created_at    TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-      CREATE INDEX IF NOT EXISTS idx_pw_history_user ON password_history (user_id, created_at DESC);
-
-      CREATE TABLE IF NOT EXISTS login_attempts (
-        id         TEXT PRIMARY KEY,
-        ip         TEXT NOT NULL,
-        email      TEXT,
-        success    INTEGER NOT NULL DEFAULT 0,
-        user_agent TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-      CREATE INDEX IF NOT EXISTS idx_login_attempts_ip_time ON login_attempts (ip, created_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_login_attempts_email_time ON login_attempts (email, created_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_login_attempts_created_at ON login_attempts (created_at);
-    `);
-
-    // 006_auth_phase1.sql + 007_auth_phase2.sql + 008_auth_phase3.sql are PG-only
-    for (const name of ["006_auth_phase1.sql", "007_auth_phase2.sql", "008_auth_phase3.sql"]) {
-      if (!applied.has(name) && pending.includes(name)) {
-        sqliteQuery("INSERT OR IGNORE INTO _migrations (name) VALUES (?)", [name]);
-        pending = pending.filter((f) => f !== name);
-      }
+    // users: auth phase 3 MFA columns
+    if (!userCols.some((c) => c.name === "mfa_secret")) {
+      db.exec("ALTER TABLE users ADD COLUMN mfa_secret TEXT");
+      console.log("[migrate]   ✓ SQLite: added mfa_secret column to users");
+    }
+    if (!userCols.some((c) => c.name === "mfa_enabled")) {
+      db.exec("ALTER TABLE users ADD COLUMN mfa_enabled INTEGER NOT NULL DEFAULT 0");
+      console.log("[migrate]   ✓ SQLite: added mfa_enabled column to users");
+    }
+    if (!userCols.some((c) => c.name === "mfa_backup_codes")) {
+      db.exec("ALTER TABLE users ADD COLUMN mfa_backup_codes TEXT");
+      console.log("[migrate]   ✓ SQLite: added mfa_backup_codes column to users");
     }
 
-    // Inline SQLite migration (auth phase 3): refresh_tokens new columns
+    // refresh_tokens: auth phase 3 columns
     const rtCols = db.prepare("PRAGMA table_info(refresh_tokens)").all() as { name: string }[];
     if (!rtCols.some((c) => c.name === "last_used_at")) {
       db.exec("ALTER TABLE refresh_tokens ADD COLUMN last_used_at TEXT");
@@ -185,20 +176,32 @@ async function runMigrations(): Promise<void> {
       console.log("[migrate]   ✓ SQLite: added ip_address column to refresh_tokens");
     }
 
-    // Inline SQLite migration (auth phase 3): MFA columns on users
-    const userCols3 = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
-    if (!userCols3.some((c) => c.name === "mfa_secret")) {
-      db.exec("ALTER TABLE users ADD COLUMN mfa_secret TEXT");
-      console.log("[migrate]   ✓ SQLite: added mfa_secret column to users");
-    }
-    if (!userCols3.some((c) => c.name === "mfa_enabled")) {
-      db.exec("ALTER TABLE users ADD COLUMN mfa_enabled INTEGER NOT NULL DEFAULT 0");
-      console.log("[migrate]   ✓ SQLite: added mfa_enabled column to users");
-    }
-    if (!userCols3.some((c) => c.name === "mfa_backup_codes")) {
-      db.exec("ALTER TABLE users ADD COLUMN mfa_backup_codes TEXT");
-      console.log("[migrate]   ✓ SQLite: added mfa_backup_codes column to users");
-    }
+    // New tables (CREATE IF NOT EXISTS — idempotent)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash TEXT NOT NULL UNIQUE, purpose TEXT NOT NULL DEFAULT 'reset',
+        payload TEXT, expires_at TEXT NOT NULL, used_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens (user_id);
+      CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires ON password_reset_tokens (expires_at);
+
+      CREATE TABLE IF NOT EXISTS password_history (
+        id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        password_hash TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_pw_history_user ON password_history (user_id, created_at DESC);
+
+      CREATE TABLE IF NOT EXISTS login_attempts (
+        id TEXT PRIMARY KEY, ip TEXT NOT NULL, email TEXT,
+        success INTEGER NOT NULL DEFAULT 0, user_agent TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_login_attempts_ip_time ON login_attempts (ip, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_login_attempts_email_time ON login_attempts (email, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_login_attempts_created_at ON login_attempts (created_at);
+    `);
 
   }
 
