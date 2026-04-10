@@ -55,40 +55,14 @@ class I18nManager {
   }
 
   public async setLocale(locale: Locale) {
-    const needsTranslationLoad = !this.translations[locale];
-    if (this.locale === locale && !needsTranslationLoad) {
-      return;
-    }
-
-    // Lazy load translations if needed
-    if (needsTranslationLoad) {
-      try {
-        let module: Record<string, TranslationMap>;
-        if (locale === "zh-CN") {
-          module = await import("../locales/zh-CN.ts");
-        } else if (locale === "zh-TW") {
-          module = await import("../locales/zh-TW.ts");
-        } else if (locale === "pt-BR") {
-          module = await import("../locales/pt-BR.ts");
-        } else if (locale === "de") {
-          module = await import("../locales/de.ts");
-        } else {
-          return;
-        }
-        this.translations[locale] = module[locale.replace("-", "_")];
-      } catch (e) {
-        console.error(`Failed to load locale: ${locale}`, e);
-        return;
-      }
-    }
+    if (this.locale === locale) return;
+    // All locales are statically imported in `translations` above, so the
+    // map is always populated — no dynamic import path is needed.
+    if (!this.translations[locale]) return;
 
     this.locale = locale;
     localStorage.setItem("enclaws.i18n.locale", locale);
     this.notify();
-  }
-
-  public registerTranslation(locale: Locale, map: TranslationMap) {
-    this.translations[locale] = map;
   }
 
   public subscribe(sub: Subscriber) {
@@ -131,7 +105,7 @@ class I18nManager {
     }
 
     if (params) {
-      return value.replace(/\{(\w+)\}/g, (_, k) => params[k] || `{${k}}`);
+      return value.replace(/\{(\w+)}/g, (_, k) => params[k] || `{${k}}`);
     }
 
     return value;
