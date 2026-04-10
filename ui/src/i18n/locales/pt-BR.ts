@@ -296,6 +296,8 @@ export const pt_BR: TranslationMap = {
     showCronSessions: "Mostrar sessões de cron",
     showCronSessionsHidden: "Mostrar sessões de cron ({count} ocultas)",
     onboardingDisabled: "Desativado durante a integração",
+    emptyTitle: "EnClaws AI Assistente Pronto",
+    emptySubtitle: "Sou o EnClaws AI. Que grandes projetos vamos construir juntos?",
   },
   languages: {
     en: "English",

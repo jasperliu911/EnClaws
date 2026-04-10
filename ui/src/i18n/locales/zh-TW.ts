@@ -293,6 +293,8 @@ export const zh_TW: TranslationMap = {
     showCronSessions: "顯示定時任務會話",
     showCronSessionsHidden: "顯示定時任務會話 (已隱藏 {count} 個)",
     onboardingDisabled: "引導期間禁用",
+    emptyTitle: "EnClaws AI 助手已就緒",
+    emptySubtitle: "我是 EnClaws AI，你有什麼偉大的藍圖需要我們構建嗎？",
   },
   languages: {
     en: "English",

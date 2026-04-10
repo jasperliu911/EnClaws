@@ -299,6 +299,8 @@ export const zh_CN: TranslationMap = {
     showCronSessions: "显示定时任务会话",
     showCronSessionsHidden: "显示定时任务会话 (已隐藏 {count} 个)",
     onboardingDisabled: "引导期间禁用",
+    emptyTitle: "EnClaws AI 助手已就绪",
+    emptySubtitle: "我是 EnClaws AI，你有什么伟大的蓝图需要我们构建吗？",
   },
   languages: {
     en: "English",

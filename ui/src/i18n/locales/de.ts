@@ -297,6 +297,8 @@ export const de: TranslationMap = {
     showCronSessions: "Cron-Sitzungen anzeigen",
     showCronSessionsHidden: "Cron-Sitzungen anzeigen ({count} ausgeblendet)",
     onboardingDisabled: "Während der Einrichtung deaktiviert",
+    emptyTitle: "EnClaws AI Assistent bereit",
+    emptySubtitle: "Ich bin EnClaws AI. Welche großartigen Pläne sollen wir gemeinsam umsetzen?",
   },
   languages: {
     en: "English",

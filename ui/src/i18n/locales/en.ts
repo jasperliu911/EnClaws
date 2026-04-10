@@ -300,6 +300,8 @@ export const en: TranslationMap = {
     showCronSessions: "Show cron sessions",
     showCronSessionsHidden: "Show cron sessions ({count} hidden)",
     onboardingDisabled: "Disabled during onboarding",
+    emptyTitle: "EnClaws AI Assistant Ready",
+    emptySubtitle: "I'm EnClaws AI. What grand blueprints shall we build together?",
   },
   languages: {
     en: "English",

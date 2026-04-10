@@ -2,6 +2,7 @@
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { icons } from "../icons.ts";
+import { t } from "../../i18n/index.ts";
 import type { ChatProps } from "./chat.ts";
 
 import { renderMarkdownSidebar } from "./markdown-sidebar.ts";
@@ -1017,26 +1018,8 @@ export class ChatLayout extends LitElement {
                         </div>
                         <div class="chat-empty-logo-circle">O</div>
                       </div>
-                      <h2 class="chat-empty-title">龙虾帝国控制台已就绪</h2>
-                      <p class="chat-empty-subtitle">我是大龙虾长老，你的首席人工智能架构师。你有什么伟大的蓝图需要我们构建吗？</p>
-                      
-                      <div class="chat-empty-actions">
-                        <button class="chat-empty-action" @click=${() => this.props.onDraftChange?.("请帮我编写一个Python的贪吃蛇游戏。")}>
-                          <span class="chat-empty-action-icon">✦</span>
-                          <span class="chat-empty-action-text">帮我用Python写个贪吃蛇</span>
-                          <span class="chat-empty-action-arrow">→</span>
-                        </button>
-                        <button class="chat-empty-action" @click=${() => this.props.onDraftChange?.("我想构建一个支持多语言的React组件。")}>
-                          <span class="chat-empty-action-icon">✦</span>
-                          <span class="chat-empty-action-text">构建多语言React组件</span>
-                          <span class="chat-empty-action-arrow">→</span>
-                        </button>
-                        <button class="chat-empty-action" @click=${() => this.props.onDraftChange?.("什么是沙盒环境？")}>
-                          <span class="chat-empty-action-icon">✦</span>
-                          <span class="chat-empty-action-text">了解沙盒环境机制</span>
-                          <span class="chat-empty-action-arrow">→</span>
-                        </button>
-                      </div>
+                      <h2 class="chat-empty-title">${t("chat.emptyTitle")}</h2>
+                      <p class="chat-empty-subtitle">${t("chat.emptySubtitle")}</p>
                     </div>
                   `
               }
