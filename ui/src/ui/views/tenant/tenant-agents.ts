@@ -14,6 +14,7 @@ import { customElement, state, property } from "lit/decorators.js";
 import { t, I18nController } from "../../../i18n/index.ts";
 import { tenantRpc, quotaErrorKey } from "./rpc.ts";
 import { pathForTab, inferBasePathFromPathname } from "../../navigation.ts";
+import { invalidateTenantAgentsCache } from "../../app-render.ts";
 import { showConfirm } from "../../components/confirm-dialog.ts";
 import { CHANNEL_ICON_MAP } from "../../../constants/channels.ts";
 import { caretFix } from "../../shared-styles.ts";
@@ -741,6 +742,9 @@ export class TenantAgentsView extends LitElement {
     try {
       const result = await this.rpc("tenant.agents.list") as { agents: TenantAgent[] };
       this.agents = result.agents ?? [];
+      // Invalidate the chat page's tenant agents cache so navigating to
+      // chat after creating/deleting an agent picks up the latest list.
+      invalidateTenantAgentsCache();
       if (!this.selectedAgentId && this.agents.length > 0) {
         this.selectedAgentId = this.agents[0].agentId;
       }
