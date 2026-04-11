@@ -530,8 +530,16 @@ export async function ensureTenantBootstrapFiles(ctx: TenantBootstrapContext): P
   for (const target of migrateTargets) {
     try {
       const current = await fs.readFile(target.filePath, "utf-8");
+      // Overwrite if content matches the generic English template OR a previous
+      // version of the enterprise defaults (e.g. Chinese → English migration).
+      // User-customized content is left untouched.
+      if (current === target.enterpriseContent) { continue; }
       const template = await loadTemplate(path.basename(target.filePath));
-      if (current === template) {
+      const isTemplate = current === template;
+      const { PREVIOUS_ENTERPRISE_DEFAULT_PREFIXES } = await import("./enterprise-defaults.js");
+      const isOldDefault = !isTemplate
+        && PREVIOUS_ENTERPRISE_DEFAULT_PREFIXES.some((prefix: string) => current.startsWith(prefix));
+      if (isTemplate || isOldDefault) {
         await fs.writeFile(target.filePath, target.enterpriseContent, "utf-8");
       }
     } catch { /* file doesn't exist yet — writeFileIfMissing handled it above */ }

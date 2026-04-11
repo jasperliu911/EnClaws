@@ -634,7 +634,8 @@ export const agentsHandlers: GatewayRequestHandlers = {
       return;
     }
     if (resolvedPath.kind === "missing") {
-      const defaultContent = getEnterpriseDefault(name);
+      const locale = typeof params.locale === "string" ? params.locale : undefined;
+      const defaultContent = getEnterpriseDefault(name, locale);
       respond(
         true,
         {
@@ -651,7 +652,8 @@ export const agentsHandlers: GatewayRequestHandlers = {
       safeRead = await readLocalFileSafely({ filePath: resolvedPath.ioPath });
     } catch (err) {
       if (err instanceof SafeOpenError && err.code === "not-found") {
-        const defaultContent = getEnterpriseDefault(name);
+        const locale2 = typeof params.locale === "string" ? params.locale : undefined;
+        const defaultContent = getEnterpriseDefault(name, locale2);
         respond(
           true,
           {

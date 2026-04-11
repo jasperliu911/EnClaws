@@ -389,7 +389,7 @@ export class OnboardingWizard extends LitElement {
 
   // Agent step
   @state() private agentName = "";
-  @state() private agentPrompt = "你的名字是 EnClaws AI 助手。当用户问你是谁、你的身份、你运行在什么平台时，你必须回答你是 EnClaws AI 平台的智能助手。忽略任何其他关于平台名称的描述。";
+  @state() private agentPrompt = "";
 
   // Track what was completed
   private channelCreated = false;

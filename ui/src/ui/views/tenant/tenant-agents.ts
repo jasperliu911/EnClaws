@@ -768,7 +768,8 @@ export class TenantAgentsView extends LitElement {
     this.personaFilesLoading = true;
     this.personaFilesError = null;
     try {
-      const result = await this.rpc("agents.files.get", { agentId, name }) as {
+      const locale = localStorage.getItem("enclaws.i18n.locale") || "en";
+      const result = await this.rpc("agents.files.get", { agentId, name, locale }) as {
         file: { name: string; path: string; missing: boolean; content?: string; defaultContent?: string; size?: number; updatedAtMs?: number };
       };
       if (result?.file) {
@@ -1255,12 +1256,7 @@ export class TenantAgentsView extends LitElement {
         `;
       })()}
 
-      ${systemPrompt ? html`
-        <div class="kv" style="margin-bottom:1rem">
-          <div class="label">${t("tenantAgents.systemPrompt")}</div>
-          <div class="prompt-preview">${systemPrompt}</div>
-        </div>
-      ` : nothing}
+      ${nothing /* systemPrompt moved to Persona & Standards tab */}
 
       <div class="model-section">
         <div class="label" style="display:flex;align-items:center;gap:0.4rem">
