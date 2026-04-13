@@ -68,11 +68,132 @@
   border-radius: 6px;
   padding: 10px 12px;
   overflow-x: auto;
+  position: relative;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .chat-text :where(pre code) {
   background: none;
   padding: 0;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* =============================================
+   CODE BLOCK COPY BUTTON
+   ============================================= */
+
+.code-copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.65);
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-family: inherit;
+  line-height: 18px;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 120ms ease-out,
+    background 120ms ease-out,
+    color 120ms ease-out,
+    border-color 120ms ease-out;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  z-index: 1;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 默认显示"复制"，隐藏"已复制" */
+.code-copy-btn__label-idle {
+  display: inline;
+}
+
+.code-copy-btn__label-done {
+  display: none;
+}
+
+/* 复制成功状态 */
+.code-copy-btn[data-copied="1"] .code-copy-btn__label-idle {
+  display: none;
+}
+
+.code-copy-btn[data-copied="1"] .code-copy-btn__label-done {
+  display: inline;
+}
+
+.code-copy-btn[data-copied="1"] {
+  opacity: 1 !important;
+  pointer-events: auto;
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+}
+
+/* 复制失败状态 */
+.code-copy-btn[data-error="1"] {
+  opacity: 1 !important;
+  pointer-events: auto;
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+}
+
+/* hover 时显示按钮 */
+.chat-text pre:hover .code-copy-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.code-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.code-copy-btn:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  outline: 2px solid rgba(59, 130, 246, 0.6);
+  outline-offset: 2px;
+}
+
+@media (hover: none) {
+  .code-copy-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* 亮色主题覆盖（必须放在通用规则之后，确保优先级正确） */
+:root[data-theme="light"] .code-copy-btn {
+  border-color: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme="light"] .code-copy-btn:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: rgba(0, 0, 0, 0.75);
+}
+
+:root[data-theme="light"] .code-copy-btn[data-copied="1"] {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+}
+
+:root[data-theme="light"] .code-copy-btn[data-error="1"] {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
 }
 
 .chat-text :where(blockquote) {

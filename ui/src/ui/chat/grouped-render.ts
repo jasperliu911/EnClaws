@@ -259,6 +259,36 @@ function renderGroupedMessage(
     .filter(Boolean)
     .join(" ");
 
+  // 代码块复制按钮事件委托处理
+  function handleCodeCopyClick(e: Event) {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    const btn = target.closest(".code-copy-btn") as HTMLButtonElement | null;
+    if (!btn) return;
+    if (btn.dataset.copying === "1") return;
+
+    const code = btn.dataset.code ?? "";
+    if (!code) return;
+
+    btn.dataset.copying = "1";
+    void navigator.clipboard.writeText(code).then(
+      () => {
+        delete btn.dataset.copying;
+        btn.dataset.copied = "1";
+        window.setTimeout(() => {
+          if (btn.isConnected) delete btn.dataset.copied;
+        }, 1500);
+      },
+      () => {
+        delete btn.dataset.copying;
+        btn.dataset.error = "1";
+        window.setTimeout(() => {
+          if (btn.isConnected) delete btn.dataset.error;
+        }, 2000);
+      },
+    );
+  }
+
   if (!markdown && hasToolCards && isToolResult) {
     return html`${toolCards.map((card) => renderToolCardSidebar(card, onOpenSidebar))}`;
   }
@@ -278,7 +308,7 @@ function renderGroupedMessage(
       }
       ${
         markdown
-          ? html`<div class="chat-text" dir="${detectTextDirection(markdown)}">${unsafeHTML(toSanitizedMarkdownHtml(markdown))}</div>`
+          ? html`<div class="chat-text" dir="${detectTextDirection(markdown)}" @click=${handleCodeCopyClick}>${unsafeHTML(toSanitizedMarkdownHtml(markdown))}</div>`
           : nothing
       }
       ${toolCards.map((card) => renderToolCardSidebar(card, onOpenSidebar))}

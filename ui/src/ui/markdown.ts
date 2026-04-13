@@ -12,6 +12,7 @@ const allowedTags = [
   "b",
   "blockquote",
   "br",
+  "button",
   "code",
   "del",
   "em",
@@ -25,6 +26,7 @@ const allowedTags = [
   "ol",
   "p",
   "pre",
+  "span",
   "strong",
   "table",
   "tbody",
@@ -36,7 +38,7 @@ const allowedTags = [
   "img",
 ];
 
-const allowedAttrs = ["class", "href", "rel", "target", "title", "start", "src", "alt"];
+const allowedAttrs = ["class", "href", "rel", "target", "title", "start", "src", "alt", "type", "aria-label", "data-code"];
 const sanitizeOptions = {
   ALLOWED_TAGS: allowedTags,
   ALLOWED_ATTR: allowedAttrs,
@@ -131,6 +133,15 @@ export function toSanitizedMarkdownHtml(markdown: string): string {
 // pages) as formatted output is confusing UX (#13937).
 const htmlEscapeRenderer = new marked.Renderer();
 htmlEscapeRenderer.html = ({ text }: { text: string }) => escapeHtml(text);
+
+// 自定义 code 渲染器：给每个代码块注入复制按钮
+// 使用纯文字标签，避免 DOMPurify 过滤 SVG 标签
+htmlEscapeRenderer.code = ({ text, lang }: { text: string; lang?: string }) => {
+  const escaped = escapeHtml(text);
+  // data-code 存储 HTML 转义后的代码，浏览器读取 dataset 时会自动解码为原始文本
+  const langClass = lang ? ` class="language-${escapeHtml(lang)}"` : "";
+  return `<pre><button class="code-copy-btn" type="button" title="复制代码" data-code="${escaped}" aria-label="复制代码"><span class="code-copy-btn__label-idle">复制</span><span class="code-copy-btn__label-done">已复制</span></button><code${langClass}>${escaped}</code></pre>`;
+};
 
 function escapeHtml(value: string): string {
   return value
