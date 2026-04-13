@@ -80,6 +80,8 @@ import { resolveConfiguredCronModelSuggestions } from "./views/agents-utils.ts";
 import { renderAgents } from "./views/agents.ts";
 import { renderChannels } from "./views/channels.ts";
 import { renderChat } from "./views/chat.ts";
+import { renderVirtualOffice, type VirtualOfficeViewMode } from "./views/virtual-office.ts";
+import { VirtualOfficeController } from "./controllers/virtual-office.ts";
 import { renderConfig } from "./views/config.ts";
 import { renderCron } from "./views/cron.ts";
 import { renderDebug } from "./views/debug.ts";
@@ -872,6 +874,48 @@ export function renderApp(state: AppViewState) {
                                           await loadCronRuns(state, state.cronRunsJobId);
                                       },
                                   })
+                                  : nothing
+                  }
+
+                  ${
+                          state.tab === "virtual-office"
+                                  ? (() => {
+                                      // Gateway 未连接时显示等待提示，不尝试发起 WS 请求
+                                      if (!state.connected || !state.client) {
+                                          return html`<div class="vo-gateway-wait">
+                                              <span class="vo-spinner"></span>
+                                              <span>正在连接服务器，请稍候...</span>
+                                          </div>`;
+                                      }
+                                      // 懒初始化 VirtualOfficeController（仅在已连接时）
+                                      if (!state._virtualOfficeCtrl) {
+                                          (state as any)._virtualOfficeCtrl = new VirtualOfficeController(state.client);
+                                          (state as any)._virtualOfficeViewMode = "list";
+                                          void (state as any)._virtualOfficeCtrl.loadSpace();
+                                          (state as any)._virtualOfficeCtrl.subscribe(() => state.requestUpdate?.());
+                                      }
+                                      const ctrl: VirtualOfficeController | undefined = (state as any)._virtualOfficeCtrl;
+                                      const voState = ctrl?.getState() ?? { loading: true, error: null, space: null, presences: [], agents: [], myUserId: null, myDisplayName: null, selectedRoomId: null, roomMessages: {}, sendingRoomId: null };
+                                      const viewMode: VirtualOfficeViewMode = (state as any)._virtualOfficeViewMode ?? "list";
+                                      return renderVirtualOffice({
+                                          state: voState,
+                                          viewMode,
+                                          onJoin: (displayName) => {
+                                              const userId = `user-${Date.now()}`;
+                                              void ctrl?.joinSpace(userId, displayName);
+                                          },
+                                          onLeave: () => void ctrl?.leaveSpace(),
+                                          onEnterRoom: (roomId) => void ctrl?.moveToRoom(roomId),
+                                          onLeaveRoom: () => void ctrl?.moveToRoom(null),
+                                          onSelectRoom: (roomId) => ctrl?.selectRoom(roomId),
+                                          onSetViewMode: (mode) => {
+                                              (state as any)._virtualOfficeViewMode = mode;
+                                              state.requestUpdate?.();
+                                          },
+                                          onSetActivity: (activity) => void ctrl?.setPresence({ activity }),
+                                          onSendMessage: (roomId, content) => void ctrl?.sendMessage(roomId, content),
+                                      });
+                                  })()
                                   : nothing
                   }
 

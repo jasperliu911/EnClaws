@@ -67,6 +67,7 @@ export const en: TranslationMap = {
     "tenant-traces": "Traces",
     "tenant-usage": "My Plan",
     "platform-tools": "Tool Management",
+    "virtual-office": "Office View",
   },
   subtitles: {
     agents: "Manage agent workspaces, tools, and identities.",
@@ -94,6 +95,7 @@ export const en: TranslationMap = {
     "tenant-traces": "Trace every LLM interaction for debugging and optimization.",
     "tenant-usage": "View your current plan, quota usage, and token consumption.",
     "platform-tools": "Configure platform-level tool access policy applied to all agents by default.",
+    "virtual-office": "Real-time virtual workspace for team collaboration.",
   },
   platformTools: {
     infoBanner: "This is the platform-level tool policy. It defines which tools are available to all agents by default. Individual agents or tenants may apply stricter overrides on top of this policy.",

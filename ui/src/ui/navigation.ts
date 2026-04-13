@@ -8,6 +8,10 @@ export const TAB_GROUPS = [
     },
     {
         label: "",
+        tabs: ["virtual-office"],
+    },
+    {
+        label: "",
         tabs: ["tenant-overview"],
     },
     {
@@ -35,6 +39,7 @@ export const TAB_GROUPS = [
 export type Tab =
     | "agents"
     | "overview"
+    | "virtual-office"
     | "platform-models"
     | "channels"
     | "instances"
@@ -61,6 +66,7 @@ export type Tab =
 
 const TAB_PATHS: Record<Tab, string> = {
     agents: "/agents",
+    "virtual-office": "/virtual-office",
     overview: "/overview",
     "platform-models": "/platform-models",
     channels: "/channels",
@@ -220,6 +226,8 @@ export function iconForTab(tab: Tab): IconName {
             return "barChart";
         case "platform-tools":
             return "zap";
+        case "virtual-office":
+            return "monitor";
         default:
             return "folder";
     }

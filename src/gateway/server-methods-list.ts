@@ -103,6 +103,18 @@ const BASE_METHODS = [
   "chat.history",
   "chat.abort",
   "chat.send",
+  // 虚拟办公室
+  "space.list",
+  "space.state",
+  "space.join",
+  "space.leave",
+  "space.room.list",
+  "space.room.move",
+  "space.presence.set",
+  "space.agents",
+  "space.agent.status",
+  "space.chat.history",
+  "space.chat.send",
 ];
 
 export function listGatewayMethods(): string[] {

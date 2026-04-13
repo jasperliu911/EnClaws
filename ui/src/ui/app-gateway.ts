@@ -326,6 +326,15 @@ function handleGatewayEventUnsafe(host: GatewayHost, evt: GatewayEventFrame) {
     void loadCron(host as unknown as Parameters<typeof loadCron>[0]);
   }
 
+  // 虚拟办公室：将 space.* 事件转发给 Controller
+  if (evt.event.startsWith("space.")) {
+    const ctrl = (host as any)._virtualOfficeCtrl;
+    if (ctrl) {
+      ctrl.handleEvent(evt);
+    }
+    return;
+  }
+
   if (evt.event === "device.pair.requested" || evt.event === "device.pair.resolved") {
     void loadDevices(host as unknown as EnClawsApp, { quiet: true });
   }

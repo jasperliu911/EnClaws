@@ -1,0 +1,7 @@
+{
+  "id": "virtual-office",
+  "name": "Virtual Office",
+  "description": "虚拟办公室 - 多人实时在线空间，支持 AI 助手接入",
+  "version": "0.1.0",
+  "entry": "index.ts"
+}

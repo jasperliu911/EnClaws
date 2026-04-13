@@ -1,0 +1,8 @@
+{
+  "name": "virtual-office",
+  "version": "0.1.0",
+  "description": "虚拟办公室插件 - 多人实时在线空间",
+  "type": "module",
+  "main": "index.ts",
+  "dependencies": {}
+}
